@@ -13,7 +13,6 @@ import { AuthStackParamList } from '../../navigation/authStack.types';
 type SignUpFormValues = {
   email: string;
   password: string;
-  confirmPassword: string;
 };
 
 const ACTION_BUTTON_WIDTH = 180;
@@ -23,22 +22,16 @@ type SignUpScreenProps = NativeStackScreenProps<AuthStackParamList, 'SignUp'>;
 export const SignUpScreen = ({ navigation }: SignUpScreenProps) => {
   const { control, handleSubmit, formState } = useForm<SignUpFormValues>({
     mode: 'onChange',
-    defaultValues: { email: '', password: '', confirmPassword: '' },
+    defaultValues: { email: '', password: '' },
   });
   const { errors, isValid } = formState;
   const [showPassword, setShowPassword] = useState(false);
-  const [showConfirm, setShowConfirm] = useState(false);
   const [acceptedTerms, setAcceptedTerms] = useState(false);
   const [serverError, setServerError] = useState<string | null>(null);
   const { theme } = useTheme();
   const { signUp, loading } = useAuth();
 
   const onSubmit = handleSubmit(async (values) => {
-    if (values.password !== values.confirmPassword) {
-      setServerError('Passwords must match.');
-      return;
-    }
-
     if (!acceptedTerms) {
       setServerError('You must accept the Terms of Service.');
       return;
@@ -91,22 +84,6 @@ export const SignUpScreen = ({ navigation }: SignUpScreenProps) => {
             }
           />
 
-          <TextField
-            control={control}
-            name="confirmPassword"
-            label="Confirm Password"
-            secureTextEntry={!showConfirm}
-            rules={{ required: 'Confirming your password helps prevent typos' }}
-            error={errors.confirmPassword}
-            rightAction={
-              <Pressable onPress={() => setShowConfirm((prev) => !prev)}>
-                <Text style={[styles.showText, { color: theme.colors.primary }]}>
-                  {showConfirm ? 'Hide' : 'Show'}
-                </Text>
-              </Pressable>
-            }
-          />
-
           <Pressable
             style={styles.termsToggle}
             onPress={() => setAcceptedTerms((prev) => !prev)}
@@ -129,8 +106,9 @@ export const SignUpScreen = ({ navigation }: SignUpScreenProps) => {
             label={loading ? 'Creating account…' : 'Sign up'}
             onPress={onSubmit}
             disabled={!isValid || !acceptedTerms || loading}
-            style={[styles.actionButton, styles.primaryAction]}
+            style={styles.actionButton}
             textStyle={styles.actionText}
+            backgroundColor="#123053"
           />
         </AuthCard>
         <AuthSwitchButton
@@ -212,9 +190,6 @@ const styles = StyleSheet.create({
   actionButton: {
     width: ACTION_BUTTON_WIDTH,
     alignSelf: 'center',
-  },
-  primaryAction: {
-    backgroundColor: '#123053',
   },
   actionText: {
     color: '#ffffff',

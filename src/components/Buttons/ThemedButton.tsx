@@ -7,18 +7,27 @@ interface ThemedButtonProps {
   disabled?: boolean;
   style?: StyleProp<ViewStyle>;
   textStyle?: StyleProp<TextStyle>;
+  backgroundColor?: string;
 }
 
-export const ThemedButton = ({ label, onPress, disabled, style, textStyle }: ThemedButtonProps) => {
+export const ThemedButton = ({
+  label,
+  onPress,
+  disabled,
+  style,
+  textStyle,
+  backgroundColor,
+}: ThemedButtonProps) => {
   const { theme } = useTheme();
 
   const normalizedStyle = Array.isArray(style) ? style : style ? [style] : [];
+  const buttonColor = backgroundColor ?? theme.colors.primary;
 
   const buttonStyle: PressableStateCallbackType = ({ pressed }) => [
     styles.button,
     {
-      backgroundColor: theme.colors.primary,
-      opacity: disabled ? 0.5 : pressed ? 0.85 : 1,
+      backgroundColor: buttonColor,
+      opacity: disabled ? 0.85 : pressed ? 0.9 : 1,
       borderRadius: theme.borderRadius.card,
     },
     ...normalizedStyle,

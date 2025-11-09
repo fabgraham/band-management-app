@@ -1,4 +1,4 @@
-import { StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useTheme } from '../../theme';
 import { useAuth } from '../../context/AuthContext';
 import { InfoCard } from '../../components/Cards/InfoCard';
@@ -20,10 +20,14 @@ export const SettingsScreen = () => {
         </Text>
       </InfoCard>
 
-      <ThemedButton
-        label={`Switch to ${mode === 'light' ? 'Dark' : 'Light'} Mode`}
-        onPress={toggleTheme}
-      />
+      <Pressable style={[styles.settingRow, { backgroundColor: theme.colors.card }]} onPress={toggleTheme}>
+        <Text style={[styles.rowLabel, theme.typography.body, { color: theme.colors.text }]}>
+          Switch to {mode === 'light' ? 'Dark' : 'Light'} Mode
+        </Text>
+        <Text style={[styles.rowHint, theme.typography.footnote, { color: theme.colors.accent }]}>
+          {mode === 'light' ? 'Dark mode dims the stage lighting' : 'Light mode keeps the view bright'}
+        </Text>
+      </Pressable>
       <ThemedButton label="Sign out" onPress={signOut} />
     </View>
   );
@@ -34,5 +38,17 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: 20,
     gap: 16,
+  },
+  settingRow: {
+    borderRadius: 14,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.1)',
+  },
+  rowLabel: {
+    marginBottom: 4,
+  },
+  rowHint: {
+    opacity: 0.75,
   },
 });

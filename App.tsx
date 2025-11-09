@@ -1,5 +1,6 @@
 import { StatusBar } from 'expo-status-bar';
-import { NavigationContainer, DarkTheme, DefaultTheme } from '@react-navigation/native';
+import { Pressable } from 'react-native';
+import { NavigationContainer, DarkTheme, DefaultTheme, getFocusedRouteNameFromRoute } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import Ionicons from '@expo/vector-icons/Ionicons';
@@ -9,13 +10,17 @@ import { BandProvider } from './src/context/BandContext';
 import { LoginScreen } from './src/screens/Auth/LoginScreen';
 import { SignUpScreen } from './src/screens/Auth/SignUpScreen';
 import { ForgotPasswordScreen } from './src/screens/Auth/ForgotPasswordScreen';
-import { LibraryScreen } from './src/screens/Library/LibraryScreen';
+import { BandsScreen } from './src/screens/Bands/BandsScreen';
+import { BandDetailScreen } from './src/screens/Bands/BandDetailScreen';
+import { ProfileScreen } from './src/screens/Profile/ProfileScreen';
 import { SetlistsScreen } from './src/screens/Setlists/SetlistsScreen';
 import { SettingsScreen } from './src/screens/Settings/SettingsScreen';
 import { AuthStackParamList } from './src/navigation/authStack.types';
+import { BandsStackParamList } from './src/navigation/bandsStack.types';
 
 const AuthStack = createNativeStackNavigator<AuthStackParamList>();
 const Tab = createBottomTabNavigator();
+const BandsStack = createNativeStackNavigator<BandsStackParamList>();
 
 const getNavigationTheme = (
   mode: 'light' | 'dark',
@@ -39,13 +44,55 @@ const getNavigationTheme = (
   };
 };
 
+const shouldHideTabBar = (route: any) => {
+  const routeName = getFocusedRouteNameFromRoute(route) ?? 'BandsHome';
+  return routeName === 'BandsHome' || routeName === 'Profile' || routeName === 'BandDetail';
+};
+
+const BandsStackNavigator = () => (
+  <BandsStack.Navigator>
+    <BandsStack.Screen name="BandsHome" component={BandsScreen} options={{ headerShown: false }} />
+    <BandsStack.Screen name="BandDetail" component={BandDetailScreen} options={{ headerShown: false }} />
+    <BandsStack.Screen
+      name="Profile"
+      component={ProfileScreen}
+      options={({ navigation }) => ({
+        title: 'Profile Settings',
+        headerStyle: {
+          backgroundColor: '#123053',
+        },
+        headerShadowVisible: false,
+        headerTitleStyle: { color: '#ffffff', fontWeight: '700', fontSize: 28 },
+        headerLeftContainerStyle: { paddingLeft: 16, paddingRight: 10 },
+        headerRightContainerStyle: { paddingRight: 16 },
+        headerStatusBarHeight: 10,
+        headerLeft: () => (
+          <Pressable
+            onPress={() => navigation.goBack()}
+            style={{
+              width: 40,
+              height: 40,
+              borderRadius: 20,
+              backgroundColor: 'rgba(255,255,255,0.12)',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            <Ionicons name="arrow-back" size={24} color="#ffffff" />
+          </Pressable>
+        ),
+      })}
+    />
+  </BandsStack.Navigator>
+);
+
 const AppTabs = () => {
   const { theme } = useTheme();
 
   const iconForRoute = (routeName: string) => {
     switch (routeName) {
-      case 'Library':
-        return 'musical-notes';
+      case 'Bands':
+        return 'people';
       case 'Setlists':
         return 'list';
       case 'Settings':
@@ -61,16 +108,19 @@ const AppTabs = () => {
         headerShown: false,
         tabBarActiveTintColor: theme.colors.primary,
         tabBarInactiveTintColor: '#8e8e93',
-        tabBarStyle: {
-          backgroundColor: theme.colors.card,
-          borderTopColor: theme.colors.border,
-        },
+        tabBarStyle: [
+          {
+            backgroundColor: theme.colors.card,
+            borderTopColor: theme.colors.border,
+          },
+          route.name === 'Bands' && shouldHideTabBar(route) ? { display: 'none' } : null,
+        ],
         tabBarIcon: ({ color, size }) => (
           <Ionicons name={iconForRoute(route.name)} color={color} size={size} />
         ),
       })}
     >
-      <Tab.Screen name="Library" component={LibraryScreen} />
+      <Tab.Screen name="Bands" component={BandsStackNavigator} />
       <Tab.Screen name="Setlists" component={SetlistsScreen} />
       <Tab.Screen name="Settings" component={SettingsScreen} />
     </Tab.Navigator>

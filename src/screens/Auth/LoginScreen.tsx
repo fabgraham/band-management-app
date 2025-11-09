@@ -85,8 +85,9 @@ export const LoginScreen = ({ navigation }: LoginScreenProps) => {
             label={loading ? 'Signing in…' : 'Sign in'}
             onPress={onSubmit}
             disabled={!isValid || loading}
-            style={[styles.actionButton, styles.primaryAction]}
+            style={styles.actionButton}
             textStyle={styles.actionText}
+            backgroundColor="#123053"
           />
 
           <Pressable style={styles.forgotLink} onPress={() => navigation.navigate('ForgotPassword')}>
@@ -146,9 +147,6 @@ const styles = StyleSheet.create({
   actionButton: {
     width: ACTION_BUTTON_WIDTH,
     alignSelf: 'center',
-  },
-  primaryAction: {
-    backgroundColor: '#123053',
   },
   actionText: {
     color: '#ffffff',

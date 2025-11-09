@@ -70,8 +70,9 @@ export const ForgotPasswordScreen = ({ navigation }: ForgotPasswordScreenProps) 
             label={loading ? 'Sending link…' : 'Send reset link'}
             onPress={onSubmit}
             disabled={!isValid || loading}
-            style={[styles.actionButton, styles.primaryAction]}
+            style={styles.actionButton}
             textStyle={styles.actionText}
+            backgroundColor="#123053"
           />
         </AuthCard>
         <AuthSwitchButton
@@ -119,9 +120,6 @@ const styles = StyleSheet.create({
   actionButton: {
     width: ACTION_BUTTON_WIDTH,
     alignSelf: 'center',
-  },
-  primaryAction: {
-    backgroundColor: '#123053',
   },
   actionText: {
     color: '#ffffff',
