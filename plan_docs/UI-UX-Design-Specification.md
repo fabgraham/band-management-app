@@ -108,6 +108,20 @@
 --separator: #E5E5EA;
 ```
 
+#### Background Spectrum
+
+These blues define the layered backgrounds and subtle gradients used across the app (excluding primary card surfaces).
+
+```css
+--haze-100: #dbe5fb;
+--haze-200: #A0BEF5;
+--haze-300: #5698ef;
+--haze-400: #3474bd;
+--haze-500: #225186;
+--haze-600: #123053;
+--haze-700: #041224;
+```
+
 #### Dark Mode Colors
 
 ```css

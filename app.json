@@ -1,0 +1,34 @@
+{
+  "expo": {
+    "name": "band-management-app",
+    "slug": "band-management-app",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "newArchEnabled": true,
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#ffffff"
+    },
+    "extra": {
+      "supabaseUrl": "https://kqpbwkfhpthmazitshxf.supabase.co",
+      "supabaseAnonKey": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtxcGJ3a2ZocHRobWF6aXRzaHhmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjI2ODQxMDksImV4cCI6MjA3ODI2MDEwOX0.PEbeIGc34l8i5QvbhgbArqfwQzgG00d6dwBMKg8q1Lg"
+    },
+    "ios": {
+      "supportsTablet": true
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#ffffff"
+      },
+      "edgeToEdgeEnabled": true,
+      "predictiveBackGestureEnabled": false
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    }
+  }
+}
