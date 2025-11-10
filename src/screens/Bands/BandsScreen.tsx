@@ -35,6 +35,10 @@ export const BandsScreen = () => {
     Alert.alert('Success', 'Band created successfully!');
   };
 
+  const handleBandPress = (bandId: string) => {
+    navigation.navigate('BandDetail', { bandId });
+  };
+
   return (
     <>
       <ScrollView
@@ -64,7 +68,7 @@ export const BandsScreen = () => {
         </View>
 
         <View style={styles.bandSection}>
-          {loading && bands.length === 0 ? (
+          {loading && (!bands || bands.length === 0) ? (
             <View style={styles.centerContainer}>
               <ActivityIndicator size="large" color="#ffffff" />
               <Text
@@ -88,7 +92,7 @@ export const BandsScreen = () => {
                 {error}
               </Text>
             </View>
-          ) : bands.length === 0 ? (
+          ) : !bands || bands.length === 0 ? (
             <View style={styles.centerContainer}>
               <Ionicons name="musical-notes-outline" size={64} color="#ffffff" />
               <Text
@@ -113,7 +117,7 @@ export const BandsScreen = () => {
               <Pressable
                 key={band.id}
                 style={styles.bandCard}
-                onPress={() => navigation.navigate('BandDetail', { bandId: band.id })}
+                onPress={() => handleBandPress(band.id)}
               >
                 <View style={styles.ribbon}>
                   <Text style={styles.ribbonText}>{band.name}</Text>
@@ -139,6 +143,7 @@ export const BandsScreen = () => {
         onClose={() => setShowCreateModal(false)}
         onSuccess={handleCreateSuccess}
       />
+
     </>
   );
 };

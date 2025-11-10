@@ -1,11 +1,14 @@
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import {
   Alert,
   Pressable,
+  RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   View,
+  ActivityIndicator,
 } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useTheme } from '../../theme';
@@ -13,32 +16,141 @@ import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { BandsStackParamList } from '../../navigation/bandsStack.types';
 import { useBand } from '../../context/BandContext';
 import { EditBandModal } from '../../components/Modals/EditBandModal';
+import { AddSongModal } from '../../components/Modals/AddSongModal';
+import { CreateSetlistModal } from '../../components/Modals/CreateSetlistModal';
+import { ThemedButton } from '../../components/Buttons/ThemedButton';
+import { getSongs, deleteSong, searchSongs } from '../../services/data/songService';
+import { getSetlists, deleteSetlist as deleteSetlistService } from '../../services/data/setlistService';
+import { Song, SetlistDetail } from '../../types';
 
 type Props = NativeStackScreenProps<BandsStackParamList, 'BandDetail'>;
 
-type TabType = 'setlists' | 'library' | 'members' | 'calendar';
+type TabType = 'overview' | 'library' | 'setlists' | 'calendar' | 'members';
 
 export const BandDetailScreen = ({ route, navigation }: Props) => {
   const { bandId } = route.params;
+  const { bands, deleteBand, selectBand, profile } = useBand();
   const { theme } = useTheme();
-  const { bands, deleteBand } = useBand();
-  const [activeTab, setActiveTab] = useState<TabType>('setlists');
+
+  // Modal states
   const [showEditModal, setShowEditModal] = useState(false);
+  const [showAddSongModal, setShowAddSongModal] = useState(false);
 
-  const band = bands.find((b) => b.id === bandId);
+  // Tab state
+  const [activeTab, setActiveTab] = useState<TabType>('overview');
 
-  if (!band) {
-    return (
-      <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
-        <Text style={theme.typography.body}>Band not found</Text>
-      </View>
-    );
-  }
+  // Song management state
+  const [songs, setSongs] = useState<Song[]>([]);
+  const [filteredSongs, setFilteredSongs] = useState<Song[]>([]);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [loadingSongs, setLoadingSongs] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+  const [setlists, setSetlists] = useState<SetlistDetail[]>([]);
+  const [loadingSetlists, setLoadingSetlists] = useState(false);
+  const [setlistsRefreshing, setSetlistsRefreshing] = useState(false);
+  const [setlistError, setSetlistError] = useState<string | null>(null);
+  const [showCreateSetlistModal, setShowCreateSetlistModal] = useState(false);
+  const [setlistEditing, setSetlistEditing] = useState<SetlistDetail | null>(null);
 
-  const handleDelete = () => {
+  const band = bands?.find((b) => b.id === bandId);
+
+  // Set active band when entering screen
+  useEffect(() => {
+    if (band) {
+      selectBand(bandId);
+    }
+  }, [bandId, selectBand, band]);
+
+  // Load songs for this band
+  const loadSongs = useCallback(async () => {
+    try {
+      setLoadingSongs(true);
+      const data = await getSongs(bandId);
+      // Sort songs alphabetically by title (case-insensitive)
+      const sortedData = [...data].sort((a, b) =>
+        a.title.toLowerCase().localeCompare(b.title.toLowerCase())
+      );
+      setSongs(sortedData);
+      setFilteredSongs(sortedData);
+    } catch (error) {
+      Alert.alert('Error', error instanceof Error ? error.message : 'Failed to load songs');
+    } finally {
+      setLoadingSongs(false);
+    }
+  }, [bandId]);
+
+  const loadSetlists = useCallback(
+    async (showSpinner: boolean = true) => {
+      try {
+        if (showSpinner) {
+          setLoadingSetlists(true);
+        }
+        setSetlistError(null);
+        const data = await getSetlists(bandId);
+        setSetlists(data);
+      } catch (error) {
+        setSetlistError(error instanceof Error ? error.message : 'Failed to load setlists');
+      } finally {
+        if (showSpinner) {
+          setLoadingSetlists(false);
+        }
+        setSetlistsRefreshing(false);
+      }
+    },
+    [bandId],
+  );
+
+  // Load songs when tab changes to library
+  useEffect(() => {
+    if (activeTab === 'library') {
+      loadSongs();
+    }
+  }, [activeTab, loadSongs]);
+
+  useEffect(() => {
+    if (activeTab === 'setlists') {
+      loadSetlists();
+    }
+  }, [activeTab, loadSetlists]);
+
+  // Debounced search
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      handleSearch(searchQuery);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
+  const handleSearch = useCallback(
+    async (query: string) => {
+      if (!query.trim()) {
+        setFilteredSongs(songs);
+        return;
+      }
+      try {
+        const results = await searchSongs(query, bandId);
+        // Sort search results alphabetically by title (case-insensitive)
+        const sortedResults = [...results].sort((a, b) =>
+          a.title.toLowerCase().localeCompare(b.title.toLowerCase())
+        );
+        setFilteredSongs(sortedResults);
+      } catch (error) {
+        console.error('Search error:', error);
+      }
+    },
+    [songs, bandId]
+  );
+
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    await loadSongs();
+    setRefreshing(false);
+  };
+
+  const handleDeleteSong = async (songId: string, songTitle: string) => {
     Alert.alert(
-      'Delete Band',
-      `Are you sure you want to delete "${band.name}"? This will delete all songs and setlists in this band. This action cannot be undone.`,
+      'Delete Song',
+      `Are you sure you want to delete "${songTitle}"?`,
       [
         { text: 'Cancel', style: 'cancel' },
         {
@@ -46,13 +158,68 @@ export const BandDetailScreen = ({ route, navigation }: Props) => {
           style: 'destructive',
           onPress: async () => {
             try {
-              await deleteBand(band.id);
-              Alert.alert('Success', 'Band deleted successfully');
-              navigation.goBack();
+              await deleteSong(songId);
+              Alert.alert('Success', 'Song deleted successfully');
+              loadSongs();
             } catch (error) {
               Alert.alert(
                 'Error',
-                error instanceof Error ? error.message : 'Failed to delete band',
+                error instanceof Error ? error.message : 'Failed to delete song'
+              );
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  const handleSetlistsRefresh = async () => {
+    setSetlistsRefreshing(true);
+    await loadSetlists(false);
+  };
+
+  const canCreateMoreSetlists = () => {
+    if (profile?.subscription_tier === 'pro') {
+      return true;
+    }
+    return setlists.length < 2;
+  };
+
+  const handleOpenCreateSetlist = () => {
+    if (!canCreateMoreSetlists()) {
+      Alert.alert(
+        'Upgrade Required',
+        'Free users can create up to 2 setlists per band. Upgrade to Pro for unlimited setlists.',
+      );
+      return;
+    }
+    setSetlistEditing(null);
+    setShowCreateSetlistModal(true);
+  };
+
+  const handleEditSetlist = (target: SetlistDetail) => {
+    setSetlistEditing(target);
+    setShowCreateSetlistModal(true);
+  };
+
+  const handleDeleteSetlist = (target: SetlistDetail) => {
+    Alert.alert(
+      'Delete Setlist',
+      `Delete "${target.name}"? This will remove all songs from the setlist.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await deleteSetlistService(target.id);
+              Alert.alert('Success', 'Setlist deleted successfully');
+              loadSetlists();
+            } catch (error) {
+              Alert.alert(
+                'Error',
+                error instanceof Error ? error.message : 'Failed to delete setlist',
               );
             }
           },
@@ -61,175 +228,503 @@ export const BandDetailScreen = ({ route, navigation }: Props) => {
     );
   };
 
+  const handleDeleteBand = () => {
+    Alert.alert(
+      'Delete Band',
+      `Are you sure you want to delete "${band?.name}"? This will delete all songs and setlists in this band. This action cannot be undone.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await deleteBand(bandId);
+              Alert.alert('Success', 'Band deleted successfully');
+              navigation.goBack();
+            } catch (error) {
+              Alert.alert(
+                'Error',
+                error instanceof Error ? error.message : 'Failed to delete band'
+              );
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  const formatDuration = (seconds?: number | null) => {
+    if (!seconds) return '0:00';
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  if (!band) {
+    return (
+      <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
+        <ActivityIndicator size="large" color={theme.colors.primary} />
+        <Text style={[theme.typography.body, { marginTop: 12 }]}>Loading band...</Text>
+      </View>
+    );
+  }
+
   const renderTabContent = () => {
     switch (activeTab) {
-      case 'setlists':
+      case 'overview':
         return (
-          <View style={styles.tabContent}>
-            <View style={styles.emptyState}>
-              <Ionicons name="list-outline" size={64} color="#999" />
-              <Text style={[theme.typography.title2, { color: '#999', marginTop: 16 }]}>
-                No setlists yet
-              </Text>
-              <Text style={[theme.typography.body, { color: '#999', marginTop: 8 }]}>
-                Create your first setlist
-              </Text>
+          <ScrollView style={styles.tabContent}>
+            <View style={styles.dashboardContainer}>
+              {/* <Text style={styles.dashboardTitle}>What would you like to do?</Text> */}
+
+              <View style={styles.cardGrid}>
+                {/* Setlists Card */}
+                <Pressable
+                  style={styles.dashboardCard}
+                  onPress={() => setActiveTab('setlists')}
+                >
+                  <View style={styles.cardIconContainer}>
+                    <Ionicons name="list" size={40} color="#123053" />
+                  </View>
+                  <Text style={styles.cardLabel}>Setlists</Text>
+                </Pressable>
+
+                {/* Library Card */}
+                <Pressable
+                  style={styles.dashboardCard}
+                  onPress={() => setActiveTab('library')}
+                >
+                  <View style={styles.cardIconContainer}>
+                    <Ionicons name="musical-notes" size={40} color="#123053" />
+                  </View>
+                  <Text style={styles.cardLabel}>Library</Text>
+                </Pressable>
+
+                {/* Calendar Card */}
+                <Pressable
+                  style={styles.dashboardCard}
+                  onPress={() => setActiveTab('calendar')}
+                >
+                  <View style={styles.cardIconContainer}>
+                    <Ionicons name="calendar" size={40} color="#123053" />
+                  </View>
+                  <Text style={styles.cardLabel}>Calendar</Text>
+                </Pressable>
+
+                {/* Members Card */}
+                <Pressable
+                  style={styles.dashboardCard}
+                  onPress={() => setActiveTab('members')}
+                >
+                  <View style={styles.cardIconContainer}>
+                    <Ionicons name="people" size={40} color="#123053" />
+                  </View>
+                  <Text style={styles.cardLabel}>Members</Text>
+                </Pressable>
+              </View>
             </View>
-          </View>
+          </ScrollView>
         );
+
       case 'library':
         return (
           <View style={styles.tabContent}>
-            <View style={styles.emptyState}>
-              <Ionicons name="musical-notes-outline" size={64} color="#999" />
-              <Text style={[theme.typography.title2, { color: '#999', marginTop: 16 }]}>
-                No songs yet
-              </Text>
-              <Text style={[theme.typography.body, { color: '#999', marginTop: 8 }]}>
-                Add songs to build your library
-              </Text>
+            {/* Search Bar */}
+            <View style={styles.searchContainer}>
+              <Ionicons name="search" size={20} color="#999" />
+              <TextInput
+                style={styles.searchInput}
+                placeholder="Search songs..."
+                placeholderTextColor="#999"
+                value={searchQuery}
+                onChangeText={setSearchQuery}
+              />
+              {searchQuery.length > 0 && (
+                <Pressable onPress={() => setSearchQuery('')}>
+                  <Ionicons name="close-circle" size={20} color="#999" />
+                </Pressable>
+              )}
             </View>
+
+            {/* Song List */}
+            {loadingSongs ? (
+              <View style={styles.centerContainer}>
+                <ActivityIndicator size="large" color={theme.colors.primary} />
+                <Text style={[theme.typography.body, { marginTop: 12 }]}>
+                  Loading songs...
+                </Text>
+              </View>
+            ) : filteredSongs.length === 0 ? (
+              <View style={styles.centerContainer}>
+                <Ionicons
+                  name={searchQuery ? 'search-outline' : 'musical-notes-outline'}
+                  size={64}
+                  color="#ccc"
+                />
+                <Text style={[theme.typography.title2, { marginTop: 16, color: '#999' }]}>
+                  {searchQuery ? 'No songs found' : 'No songs yet'}
+                </Text>
+                <Text style={[theme.typography.body, { marginTop: 8, color: '#999' }]}>
+                  {searchQuery
+                    ? 'Try a different search term'
+                    : 'Add your first song to get started'}
+                </Text>
+              </View>
+            ) : (
+              <ScrollView
+                style={styles.songList}
+                refreshControl={
+                  <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
+                }
+              >
+                {filteredSongs.map((song) => (
+                  <Pressable
+                    key={song.id}
+                    style={[styles.songCard, { backgroundColor: theme.colors.card }]}
+                    onPress={() => navigation.navigate('SongDetail', { songId: song.id })}
+                  >
+                    <View style={styles.songHeader}>
+                      <Text style={[styles.songTitle, { color: theme.colors.text }]}>
+                        {song.title}
+                      </Text>
+                      <Pressable onPress={() => handleDeleteSong(song.id, song.title)}>
+                        <Ionicons name="trash-outline" size={20} color="#ff3b30" />
+                      </Pressable>
+                    </View>
+                    <Text style={[styles.songArtist, { color: '#666' }]}>
+                      {song.artist}
+                    </Text>
+
+                    <View style={styles.songMetadata}>
+                      {song.key && (
+                        <View style={styles.keyBadge}>
+                          <Ionicons name="musical-note" size={12} color="#ffffff" />
+                          <Text style={styles.keyText}>{song.key}</Text>
+                        </View>
+                      )}
+                      {song.bpm && (
+                        <View style={styles.metadataItem}>
+                          <Ionicons
+                            name="speedometer-outline"
+                            size={14}
+                            color="#666"
+                          />
+                          <Text
+                            style={[
+                              styles.metadataText,
+                              { color: '#666' },
+                            ]}
+                          >
+                            {song.bpm} BPM
+                          </Text>
+                        </View>
+                      )}
+                      {song.duration_seconds && (
+                        <View style={styles.metadataItem}>
+                          <Ionicons
+                            name="time-outline"
+                            size={14}
+                            color="#666"
+                          />
+                          <Text
+                            style={[
+                              styles.metadataText,
+                              { color: '#666' },
+                            ]}
+                          >
+                            {formatDuration(song.duration_seconds)}
+                          </Text>
+                        </View>
+                      )}
+                    </View>
+                  </Pressable>
+                ))}
+              </ScrollView>
+            )}
           </View>
         );
-      case 'members':
+
+      case 'setlists':
         return (
           <View style={styles.tabContent}>
-            <View style={styles.emptyState}>
-              <Ionicons name="people-outline" size={64} color="#999" />
-              <Text style={[theme.typography.title2, { color: '#999', marginTop: 16 }]}>
-                No members yet
+            {setlistError && (
+              <Text style={[styles.errorText, { color: '#ff3b30' }]}>
+                {setlistError}
               </Text>
-              <Text style={[theme.typography.body, { color: '#999', marginTop: 8 }]}>
-                Coming in Phase 3
-              </Text>
-            </View>
+            )}
+            {loadingSetlists ? (
+              <View style={styles.centerContainer}>
+                <ActivityIndicator size="large" color={theme.colors.primary} />
+                <Text style={[theme.typography.body, { marginTop: 12, color: '#6e6e73' }]}>
+                  Loading setlists...
+                </Text>
+              </View>
+            ) : (
+              <ScrollView
+                style={styles.setlistScroll}
+                refreshControl={
+                  <RefreshControl
+                    refreshing={setlistsRefreshing}
+                    onRefresh={handleSetlistsRefresh}
+                  />
+                }
+              >
+                {setlists.length === 0 ? (
+                  <View style={styles.centerContainer}>
+                    <Ionicons name="list-outline" size={64} color="#ccc" />
+                    <Text style={[theme.typography.title2, { marginTop: 16, color: '#999' }]}>
+                      No setlists yet
+                    </Text>
+                    <Text style={[theme.typography.body, { marginTop: 8, color: '#999', textAlign: 'center' }]}>
+                      Tap the plus button to create your first setlist.
+                    </Text>
+                  </View>
+                ) : (
+                  setlists.map((item) => {
+                    const totalDuration = item.songs.reduce(
+                      (sum, entry) => sum + (entry.song?.duration_seconds ?? 0),
+                      0,
+                    );
+                    return (
+                      <Pressable
+                        key={item.id}
+                        style={styles.setlistCard}
+                        onPress={() => navigation.navigate('SetlistDetail', { setlistId: item.id })}
+                      >
+                        <View style={styles.setlistCardHeader}>
+                          <Text style={styles.setlistName}>{item.name}</Text>
+                          <View style={styles.setlistActions}>
+                            <Pressable
+                              style={styles.setlistActionButton}
+                              onPress={() => handleEditSetlist(item)}
+                            >
+                              <Ionicons name="create-outline" size={20} color="#123053" />
+                            </Pressable>
+                            <Pressable
+                              style={styles.setlistActionButton}
+                              onPress={() => handleDeleteSetlist(item)}
+                            >
+                              <Ionicons name="trash-outline" size={20} color="#ff3b30" />
+                            </Pressable>
+                          </View>
+                        </View>
+                        <Text style={styles.setlistDate}>
+                          {item.show_date
+                            ? new Date(`${item.show_date}T00:00:00`).toLocaleDateString()
+                            : 'No date set'}
+                        </Text>
+                        <View style={styles.setlistStats}>
+                          <View style={styles.setlistStat}>
+                            <Text style={styles.setlistStatLabel}>Songs</Text>
+                            <Text style={styles.setlistStatValue}>{item.songs.length}</Text>
+                          </View>
+                          <View style={styles.setlistStat}>
+                            <Text style={styles.setlistStatLabel}>Duration</Text>
+                            <Text style={styles.setlistStatValue}>
+                              {formatDuration(totalDuration)}
+                            </Text>
+                          </View>
+                        </View>
+                      </Pressable>
+                    );
+                  })
+                )}
+              </ScrollView>
+            )}
           </View>
         );
+
       case 'calendar':
         return (
           <View style={styles.tabContent}>
-            <View style={styles.emptyState}>
-              <Ionicons name="calendar-outline" size={64} color="#999" />
-              <Text style={[theme.typography.title2, { color: '#999', marginTop: 16 }]}>
-                No shows scheduled
+            <View style={styles.centerContainer}>
+              <Ionicons name="calendar-outline" size={64} color="#ccc" />
+              <Text style={[theme.typography.title2, { marginTop: 16, color: '#999' }]}>
+                Calendar Coming Soon
               </Text>
-              <Text style={[theme.typography.body, { color: '#999', marginTop: 8 }]}>
-                Coming in Phase 4
+              <Text style={[theme.typography.body, { marginTop: 8, color: '#999' }]}>
+                Track rehearsals and gigs
               </Text>
             </View>
           </View>
         );
+
+      case 'members':
+        return (
+          <View style={styles.tabContent}>
+            <View style={styles.centerContainer}>
+              <Ionicons name="people-outline" size={64} color="#ccc" />
+              <Text style={[theme.typography.title2, { marginTop: 16, color: '#999' }]}>
+                Members Coming Soon
+              </Text>
+              <Text style={[theme.typography.body, { marginTop: 8, color: '#999' }]}>
+                Phase 5 feature
+              </Text>
+            </View>
+          </View>
+        );
+
+      default:
+        return null;
     }
+  };
+
+  // Get header title based on active tab
+  const getHeaderTitle = () => {
+    switch (activeTab) {
+      case 'overview':
+        return band.name;
+      case 'library':
+        return 'Library';
+      case 'setlists':
+        return 'Setlists';
+      case 'calendar':
+        return 'Calendar';
+      case 'members':
+        return 'Members';
+      default:
+        return band.name;
+    }
+  };
+
+  // Render header actions based on active tab
+  const renderHeaderActions = () => {
+    if (activeTab === 'library') {
+      return (
+        <Pressable onPress={() => setShowAddSongModal(true)} style={styles.headerButton}>
+          <Ionicons name="add" size={24} color="#ffffff" />
+        </Pressable>
+      );
+    }
+
+    if (activeTab === 'setlists') {
+      return (
+        <Pressable onPress={handleOpenCreateSetlist} style={styles.headerButton}>
+          <Ionicons name="add" size={24} color="#ffffff" />
+        </Pressable>
+      );
+    }
+
+    // For overview and other tabs, show edit and delete
+    return (
+      <>
+        <Pressable onPress={() => setShowEditModal(true)} style={styles.headerButton}>
+          <Ionicons name="create-outline" size={24} color="#ffffff" />
+        </Pressable>
+        <Pressable onPress={handleDeleteBand} style={styles.headerButton}>
+          <Ionicons name="trash-outline" size={24} color="#ffffff" />
+        </Pressable>
+      </>
+    );
   };
 
   return (
     <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
       {/* Header */}
-      <View style={[styles.header, { backgroundColor: '#123053' }]}>
-        <Pressable style={styles.backButton} onPress={() => navigation.goBack()}>
+      <View style={styles.header}>
+        <Pressable onPress={() => navigation.goBack()} style={styles.backButton}>
           <Ionicons name="arrow-back" size={24} color="#ffffff" />
         </Pressable>
-        <Text style={[theme.typography.title1, { color: '#ffffff', flex: 1, fontWeight: '700' }]}>
-          {band.name}
-        </Text>
-        <Pressable style={styles.headerButton} onPress={handleDelete}>
-          <Ionicons name="trash-outline" size={22} color="#ffffff" />
-        </Pressable>
-        <Pressable
-          style={styles.headerButton}
-          onPress={() => setShowEditModal(true)}
-        >
-          <Ionicons name="create-outline" size={22} color="#ffffff" />
-        </Pressable>
+        <Text style={styles.bandName}>{getHeaderTitle()}</Text>
+        <View style={styles.headerActions}>
+          {renderHeaderActions()}
+        </View>
       </View>
 
-      {/* Content */}
-      <ScrollView style={styles.content}>{renderTabContent()}</ScrollView>
+      {/* Tab Content */}
+      {renderTabContent()}
 
       {/* Bottom Tab Bar */}
-      <View style={styles.tabBar}>
+      <View style={styles.bottomTabBar}>
         <Pressable
-          style={styles.tab}
+          style={[
+            styles.bottomTab,
+            activeTab === 'setlists' && styles.bottomTabActive,
+          ]}
           onPress={() => setActiveTab('setlists')}
         >
           <Ionicons
             name={activeTab === 'setlists' ? 'list' : 'list-outline'}
-            size={24}
-            color={activeTab === 'setlists' ? '#123053' : '#999'}
+            size={28}
+            color={activeTab === 'setlists' ? '#007AFF' : '#999'}
           />
-          <Text
-            style={[
-              styles.tabLabel,
-              { color: activeTab === 'setlists' ? '#123053' : '#999' },
-            ]}
-          >
-            Setlists
-          </Text>
         </Pressable>
-
         <Pressable
-          style={styles.tab}
+          style={[
+            styles.bottomTab,
+            activeTab === 'library' && styles.bottomTabActive,
+          ]}
           onPress={() => setActiveTab('library')}
         >
           <Ionicons
             name={activeTab === 'library' ? 'musical-notes' : 'musical-notes-outline'}
-            size={24}
-            color={activeTab === 'library' ? '#123053' : '#999'}
+            size={28}
+            color={activeTab === 'library' ? '#007AFF' : '#999'}
           />
-          <Text
-            style={[
-              styles.tabLabel,
-              { color: activeTab === 'library' ? '#123053' : '#999' },
-            ]}
-          >
-            Library
-          </Text>
         </Pressable>
-
         <Pressable
-          style={styles.tab}
-          onPress={() => setActiveTab('members')}
-        >
-          <Ionicons
-            name={activeTab === 'members' ? 'people' : 'people-outline'}
-            size={24}
-            color={activeTab === 'members' ? '#123053' : '#999'}
-          />
-          <Text
-            style={[
-              styles.tabLabel,
-              { color: activeTab === 'members' ? '#123053' : '#999' },
-            ]}
-          >
-            Members
-          </Text>
-        </Pressable>
-
-        <Pressable
-          style={styles.tab}
+          style={[
+            styles.bottomTab,
+            activeTab === 'calendar' && styles.bottomTabActive,
+          ]}
           onPress={() => setActiveTab('calendar')}
         >
           <Ionicons
             name={activeTab === 'calendar' ? 'calendar' : 'calendar-outline'}
-            size={24}
-            color={activeTab === 'calendar' ? '#123053' : '#999'}
+            size={28}
+            color={activeTab === 'calendar' ? '#007AFF' : '#999'}
           />
-          <Text
-            style={[
-              styles.tabLabel,
-              { color: activeTab === 'calendar' ? '#123053' : '#999' },
-            ]}
-          >
-            Calendar
-          </Text>
+        </Pressable>
+        <Pressable
+          style={[
+            styles.bottomTab,
+            activeTab === 'members' && styles.bottomTabActive,
+          ]}
+          onPress={() => setActiveTab('members')}
+        >
+          <Ionicons
+            name={activeTab === 'members' ? 'people' : 'people-outline'}
+            size={28}
+            color={activeTab === 'members' ? '#007AFF' : '#999'}
+          />
         </Pressable>
       </View>
 
+      {/* Modals */}
       <EditBandModal
         visible={showEditModal}
+        onClose={() => setShowEditModal(false)}
         bandId={band.id}
         bandName={band.name}
-        onClose={() => setShowEditModal(false)}
+      />
+
+      <AddSongModal
+        visible={showAddSongModal}
+        onClose={() => setShowAddSongModal(false)}
+        onSuccess={async () => {
+          setShowAddSongModal(false);
+          // Small delay to ensure modal closes before fetching
+          // This prevents ERR_ABORTED network errors
+          setTimeout(() => {
+            loadSongs();
+          }, 300);
+        }}
+      />
+
+      <CreateSetlistModal
+        visible={showCreateSetlistModal}
+        onClose={() => {
+          setShowCreateSetlistModal(false);
+          setSetlistEditing(null);
+        }}
+        bandId={band.id}
+        setlist={setlistEditing ?? undefined}
+        onSuccess={async () => {
+          setShowCreateSetlistModal(false);
+          setSetlistEditing(null);
+          await loadSetlists();
+        }}
       />
     </View>
   );
@@ -240,12 +735,13 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   header: {
+    paddingTop: 20,
+    paddingBottom: 20,
+    paddingHorizontal: 20,
+    backgroundColor: '#123053',
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingTop: 10,
-    paddingBottom: 12,
-    gap: 12,
+    justifyContent: 'space-between',
   },
   backButton: {
     width: 40,
@@ -255,6 +751,17 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  bandName: {
+    fontSize: 30,
+    fontWeight: 'bold',
+    color: '#ffffff',
+    flex: 1,
+    marginLeft: 12,
+  },
+  headerActions: {
+    flexDirection: 'row',
+    gap: 8,
+  },
   headerButton: {
     width: 40,
     height: 40,
@@ -263,33 +770,235 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  content: {
-    flex: 1,
-  },
   tabContent: {
     flex: 1,
-    padding: 16,
   },
-  emptyState: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 60,
-  },
-  tabBar: {
+  bottomTabBar: {
     flexDirection: 'row',
+    backgroundColor: '#ffffff',
     borderTopWidth: 1,
     borderTopColor: '#e5e5ea',
-    backgroundColor: '#ffffff',
-    paddingBottom: 8,
-    paddingTop: 4,
+    paddingBottom: 20,
+    paddingTop: 8,
+    paddingHorizontal: 8,
   },
-  tab: {
+  bottomTab: {
     flex: 1,
     alignItems: 'center',
-    paddingVertical: 4,
+    justifyContent: 'center',
+    paddingVertical: 12,
+    borderRadius: 12,
   },
-  tabLabel: {
+  bottomTabActive: {
+    backgroundColor: 'rgba(0, 122, 255, 0.1)',
+  },
+  bottomTabText: {
+    fontSize: 10,
+    marginTop: 4,
+    fontWeight: '500',
+  },
+  centerContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 40,
+  },
+  infoCard: {
+    padding: 16,
+    marginHorizontal: 20,
+    marginTop: 16,
+    borderRadius: 12,
+  },
+  infoLabel: {
+    fontSize: 14,
+    marginBottom: 4,
+  },
+  infoValue: {
+    fontSize: 18,
+    fontWeight: '600',
+  },
+  searchContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#f5f5f5',
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    margin: 16,
+    gap: 8,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 16,
+    color: '#000',
+  },
+  songList: {
+    flex: 1,
+    paddingHorizontal: 16,
+  },
+  songCard: {
+    padding: 16,
+    borderRadius: 12,
+    marginBottom: 12,
+  },
+  songHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  songTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    flex: 1,
+  },
+  songArtist: {
+    fontSize: 14,
+    marginBottom: 8,
+  },
+  songMetadata: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    flexWrap: 'wrap',
+  },
+  keyBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#007AFF',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+    gap: 4,
+  },
+  keyText: {
     fontSize: 12,
+    fontWeight: '600',
+    color: '#ffffff',
+  },
+  metadataItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  metadataText: {
+    fontSize: 12,
+  },
+  fab: {
+    position: 'absolute',
+    right: 20,
+    bottom: 20,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: '#007AFF',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 5,
+  },
+  dashboardContainer: {
+    padding: 20,
+  },
+  dashboardTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#1c1c1e',
+    marginBottom: 24,
+  },
+  cardGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 16,
+  },
+  dashboardCard: {
+    width: '47%',
+    aspectRatio: 1,
+    backgroundColor: '#ffffff',
+    borderRadius: 16,
+    padding: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 3,
+    borderWidth: 1,
+    borderColor: '#e5e5ea',
+  },
+  cardIconContainer: {
+    marginBottom: 12,
+  },
+  cardLabel: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#123053',
+    textAlign: 'center',
+  },
+  errorText: {
+    paddingHorizontal: 16,
+    paddingTop: 12,
+  },
+  setlistScroll: {
+    flex: 1,
+    paddingHorizontal: 16,
+  },
+  setlistCard: {
+    backgroundColor: '#ffffff',
+    borderRadius: 16,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: '#e5e5ea',
+    marginBottom: 12,
+  },
+  setlistCardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  setlistName: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#1c1c1e',
+    flex: 1,
+    marginRight: 12,
+  },
+  setlistActions: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  setlistActionButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#f2f2f7',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  setlistDate: {
+    color: '#6e6e73',
+    marginTop: 6,
+  },
+  setlistStats: {
+    flexDirection: 'row',
+    gap: 24,
+    marginTop: 16,
+  },
+  setlistStat: {
+    flex: 1,
+  },
+  setlistStatLabel: {
+    color: '#6e6e73',
+    fontSize: 12,
+  },
+  setlistStatValue: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#1c1c1e',
     marginTop: 4,
   },
 });

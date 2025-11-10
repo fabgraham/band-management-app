@@ -1,8 +1,7 @@
 import { StatusBar } from 'expo-status-bar';
 import { Pressable } from 'react-native';
-import { NavigationContainer, DarkTheme, DefaultTheme, getFocusedRouteNameFromRoute } from '@react-navigation/native';
+import { NavigationContainer, DarkTheme, DefaultTheme } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { ThemeProvider, useTheme } from './src/theme';
 import { AuthProvider, useAuth } from './src/context/AuthContext';
@@ -13,13 +12,12 @@ import { ForgotPasswordScreen } from './src/screens/Auth/ForgotPasswordScreen';
 import { BandsScreen } from './src/screens/Bands/BandsScreen';
 import { BandDetailScreen } from './src/screens/Bands/BandDetailScreen';
 import { ProfileScreen } from './src/screens/Profile/ProfileScreen';
-import { SetlistsScreen } from './src/screens/Setlists/SetlistsScreen';
-import { SettingsScreen } from './src/screens/Settings/SettingsScreen';
+import { SongDetailScreen } from './src/screens/Library/SongDetailScreen';
+import { SetlistDetailScreen } from './src/screens/Setlists/SetlistDetailScreen';
 import { AuthStackParamList } from './src/navigation/authStack.types';
 import { BandsStackParamList } from './src/navigation/bandsStack.types';
 
 const AuthStack = createNativeStackNavigator<AuthStackParamList>();
-const Tab = createBottomTabNavigator();
 const BandsStack = createNativeStackNavigator<BandsStackParamList>();
 
 const getNavigationTheme = (
@@ -44,15 +42,12 @@ const getNavigationTheme = (
   };
 };
 
-const shouldHideTabBar = (route: any) => {
-  const routeName = getFocusedRouteNameFromRoute(route) ?? 'BandsHome';
-  return routeName === 'BandsHome' || routeName === 'Profile' || routeName === 'BandDetail';
-};
-
 const BandsStackNavigator = () => (
   <BandsStack.Navigator>
     <BandsStack.Screen name="BandsHome" component={BandsScreen} options={{ headerShown: false }} />
     <BandsStack.Screen name="BandDetail" component={BandDetailScreen} options={{ headerShown: false }} />
+    <BandsStack.Screen name="SongDetail" component={SongDetailScreen} options={{ headerShown: false }} />
+    <BandsStack.Screen name="SetlistDetail" component={SetlistDetailScreen} options={{ headerShown: false }} />
     <BandsStack.Screen
       name="Profile"
       component={ProfileScreen}
@@ -86,47 +81,6 @@ const BandsStackNavigator = () => (
   </BandsStack.Navigator>
 );
 
-const AppTabs = () => {
-  const { theme } = useTheme();
-
-  const iconForRoute = (routeName: string) => {
-    switch (routeName) {
-      case 'Bands':
-        return 'people';
-      case 'Setlists':
-        return 'list';
-      case 'Settings':
-        return 'settings';
-      default:
-        return 'ellipse';
-    }
-  };
-
-  return (
-    <Tab.Navigator
-      screenOptions={({ route }) => ({
-        headerShown: false,
-        tabBarActiveTintColor: theme.colors.primary,
-        tabBarInactiveTintColor: '#8e8e93',
-        tabBarStyle: [
-          {
-            backgroundColor: theme.colors.card,
-            borderTopColor: theme.colors.border,
-          },
-          route.name === 'Bands' && shouldHideTabBar(route) ? { display: 'none' } : null,
-        ],
-        tabBarIcon: ({ color, size }) => (
-          <Ionicons name={iconForRoute(route.name)} color={color} size={size} />
-        ),
-      })}
-    >
-      <Tab.Screen name="Bands" component={BandsStackNavigator} />
-      <Tab.Screen name="Setlists" component={SetlistsScreen} />
-      <Tab.Screen name="Settings" component={SettingsScreen} />
-    </Tab.Navigator>
-  );
-};
-
 const AppContent = () => {
   const { theme, mode } = useTheme();
   const { user } = useAuth();
@@ -143,7 +97,7 @@ const AppContent = () => {
     <>
       <NavigationContainer theme={navigationTheme}>
         {user ? (
-          <AppTabs />
+          <BandsStackNavigator />
         ) : (
           <AuthStack.Navigator
             initialRouteName="SignUp"

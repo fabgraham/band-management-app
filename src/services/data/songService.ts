@@ -13,7 +13,7 @@ const handleError = (error: PostgrestError | null, context: string) => {
 
 export const createSong = async (payload: CreateSongPayload): Promise<Song> => {
   const { data, error } = await supabase
-    .from<Song>(SONG_TABLE)
+    .from(SONG_TABLE)
     .insert(payload)
     .select()
     .single();
@@ -24,23 +24,64 @@ export const createSong = async (payload: CreateSongPayload): Promise<Song> => {
     throw new Error('Failed to create song – no response body.');
   }
 
-  return data;
+  return data as Song;
 };
 
-export const getSongs = async (): Promise<Song[]> => {
+/**
+ * Get a single song by ID
+ */
+export const getSongById = async (songId: string): Promise<Song> => {
   const { data, error } = await supabase
-    .from<Song>(SONG_TABLE)
+    .from(SONG_TABLE)
     .select('*')
-    .order('title', { ascending: true });
+    .eq('id', songId)
+    .single();
+
+  handleError(error, 'Failed to load song');
+
+  if (!data) {
+    throw new Error('Song not found');
+  }
+
+  return data as Song;
+};
+
+/**
+ * Get all songs, optionally filtered by band
+ */
+export const getSongs = async (bandId?: string): Promise<Song[]> => {
+  let query = supabase
+    .from(SONG_TABLE)
+    .select('*');
+
+  if (bandId) {
+    query = query.eq('band_id', bandId);
+  }
+
+  const { data, error } = await query.order('title', { ascending: true });
 
   handleError(error, 'Failed to load songs');
 
-  return data ?? [];
+  return (data as Song[]) ?? [];
+};
+
+/**
+ * Get song count for a band (for freemium limit checking)
+ */
+export const getSongCount = async (bandId: string): Promise<number> => {
+  const { count, error } = await supabase
+    .from(SONG_TABLE)
+    .select('*', { count: 'exact', head: true })
+    .eq('band_id', bandId);
+
+  handleError(error, 'Failed to count songs');
+
+  return count ?? 0;
 };
 
 export const updateSong = async (songId: string, updates: UpdateSongPayload): Promise<Song> => {
   const { data, error } = await supabase
-    .from<Song>(SONG_TABLE)
+    .from(SONG_TABLE)
     .update(updates)
     .eq('id', songId)
     .select()
@@ -52,7 +93,7 @@ export const updateSong = async (songId: string, updates: UpdateSongPayload): Pr
     throw new Error('Failed to update song – no response body.');
   }
 
-  return data;
+  return data as Song;
 };
 
 export const deleteSong = async (songId: string): Promise<void> => {
@@ -61,7 +102,10 @@ export const deleteSong = async (songId: string): Promise<void> => {
   handleError(error, 'Failed to delete song');
 };
 
-export const searchSongs = async (term: string): Promise<Song[]> => {
+/**
+ * Search songs by title or artist, optionally filtered by band
+ */
+export const searchSongs = async (term: string, bandId?: string): Promise<Song[]> => {
   const trimmedTerm = term.trim();
 
   if (!trimmedTerm) {
@@ -69,14 +113,20 @@ export const searchSongs = async (term: string): Promise<Song[]> => {
   }
 
   const likePattern = `%${trimmedTerm}%`;
-  const { data, error } = await supabase
-    .from<Song>(SONG_TABLE)
+  let query = supabase
+    .from(SONG_TABLE)
     .select('*')
-    .or(`title.ilike.${likePattern},artist.ilike.${likePattern}`)
+    .or(`title.ilike.${likePattern},artist.ilike.${likePattern}`);
+
+  if (bandId) {
+    query = query.eq('band_id', bandId);
+  }
+
+  const { data, error } = await query
     .order('title', { ascending: true })
     .limit(50);
 
   handleError(error, 'Failed to search songs');
 
-  return data ?? [];
+  return (data as Song[]) ?? [];
 };
