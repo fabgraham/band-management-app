@@ -1504,6 +1504,44 @@ This restructure simplifies the app architecture and makes song management more 
 
 ---
 
+### Recent Updates and Bug Fixes (December 2025)
+
+The following work was completed or attempted to improve stability and clarity across Phase 2 and the adjacent setlist flows:
+
+**1) Setlist Deletion Debugging and RLS Policy Fixes**
+- Strengthened `deleteSetlist` to verify affected row counts and throw a specific error when no rows are deleted.
+- Added detailed console logging around delete flows for faster diagnosis.
+- Added success/error logging in `src/screens/Setlists/SetlistDetailScreen.tsx` to surface failure reasons to the UI.
+- Proposed and added migration to support shared access via band members (see band-membership migration below) to address RLS permissions that previously allowed only the band creator.
+
+**2) Adding Songs to Setlist Improvements**
+- Updated `addSongsToSetlist` to return `{ insertedCount, skippedCount }`, where `skippedCount` indicates duplicates already in the setlist.
+- Implemented granular alerts in `src/components/Modals/AddSetlistSongsModal.tsx` for success, partial success, no changes, and potential permission issues.
+- Added structured logging for insert operations and duplicate detection to simplify troubleshooting.
+
+**3) Band Membership and Broader RLS Policies**
+- Created `supabase/migrations/band-membership-and-policies.sql` introducing `public.band_members` and broadening policies for `songs`, `setlists`, and `setlist_songs`.
+- Policies now allow any band member (not just the creator) to perform CRUD operations while preserving owner access.
+- Guidance provided to apply the migration and refresh the schema cache as needed.
+
+**4) AddSongModal UI Consistency (Attempted)**
+- Began planning to convert `AddSongModal` to a floating style with fade animation to match the setlist modals.
+- Target behavior: non-blocking backdrop close, subtle fade-in/out, consistent header actions.
+- Not yet merged; existing layout remains. This adjustment is slated for the next iteration.
+
+**5) Enhanced Error Handling and Logging**
+- More explicit `Alert` messages with permission hints when operations fail due to RLS.
+- Defensive checks and improved `onSuccess` callbacks to reduce race conditions.
+- Continued use of the 300ms delay when closing modals before fetching updated lists to prevent `net::ERR_ABORTED`.
+
+**Related Files Modified/Added:**
+- `src/services/data/setlistService.ts` — delete/add improvements, verification, and logging.
+- `src/components/Modals/AddSetlistSongsModal.tsx` — granular result messaging and logging.
+- `src/screens/Setlists/SetlistDetailScreen.tsx` — success/error logging around delete.
+- `supabase/migrations/band-membership-and-policies.sql` — band membership table and broader RLS policies.
+
+---
+
 ## Phase 3: Setlist Management (Ready to Begin)
 
 **Status:** Ready for implementation

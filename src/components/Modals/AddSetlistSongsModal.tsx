@@ -100,13 +100,25 @@ export const AddSetlistSongsModal = ({
     }
 
     try {
-      await addSongsToSetlist(setlistId, selectedSongIds);
-      Alert.alert('Success', 'Songs added to setlist.');
-      onSuccess?.();
+      const { insertedCount, skippedCount } = await addSongsToSetlist(setlistId, selectedSongIds);
+      console.log('[AddSetlistSongsModal] add result', { insertedCount, skippedCount });
+
+      if (insertedCount === 0 && skippedCount > 0) {
+        Alert.alert('No changes', 'All selected songs are already in this setlist.');
+      } else if (insertedCount > 0 && skippedCount > 0) {
+        Alert.alert('Partial success', `${insertedCount} song(s) added. ${skippedCount} already present.`);
+      } else if (insertedCount > 0) {
+        Alert.alert('Success', `${insertedCount} song(s) added to setlist.`);
+      } else {
+        Alert.alert('No changes', 'No songs were added. You may not have permission.');
+      }
+      // Ensure parent refresh happens before closing
+      await onSuccess?.();
       onClose();
       setSelectedSongIds([]);
       setSearchQuery('');
     } catch (err) {
+      console.error('[AddSetlistSongsModal] add error', err);
       Alert.alert(
         'Error',
         err instanceof Error ? err.message : 'Failed to add songs.',

@@ -86,23 +86,26 @@ export const SetlistDetailScreen = () => {
 
     Alert.alert(
       'Delete Setlist',
-      `Delete "${setlist.name}"? This will remove all songs from this setlist.`,
+      `Are you sure you want to delete "${setlist.name}"?`,
       [
-        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Cancel',
+          style: 'cancel',
+        },
         {
           text: 'Delete',
           style: 'destructive',
-          onPress: async () => {
-            try {
-              await deleteSetlist(setlist.id);
-              Alert.alert('Success', 'Setlist deleted successfully.');
-              navigation.goBack();
-            } catch (error) {
-              Alert.alert(
-                'Error',
-                error instanceof Error ? error.message : 'Failed to delete setlist.',
-              );
-            }
+          onPress: () => {
+            deleteSetlist(setlist.id)
+              .then(() => {
+                navigation.goBack();
+              })
+              .catch((error) => {
+                Alert.alert(
+                  'Error',
+                  error instanceof Error ? error.message : 'Failed to delete setlist.'
+                );
+              });
           },
         },
       ],
@@ -112,22 +115,26 @@ export const SetlistDetailScreen = () => {
   const handleRemoveSong = (entryId: string, songTitle: string) => {
     Alert.alert(
       'Remove Song',
-      `Remove "${songTitle}" from this setlist?`,
+      `Are you sure you want to remove "${songTitle}" from this setlist?`,
       [
-        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Cancel',
+          style: 'cancel',
+        },
         {
           text: 'Remove',
           style: 'destructive',
-          onPress: async () => {
-            try {
-              await removeSongFromSetlist(entryId);
-              await loadSetlist();
-            } catch (error) {
-              Alert.alert(
-                'Error',
-                error instanceof Error ? error.message : 'Failed to remove song.',
-              );
-            }
+          onPress: () => {
+            removeSongFromSetlist(entryId)
+              .then(() => {
+                return loadSetlist();
+              })
+              .catch((error) => {
+                Alert.alert(
+                  'Error',
+                  error instanceof Error ? error.message : 'Failed to remove song.'
+                );
+              });
           },
         },
       ],
@@ -186,7 +193,15 @@ export const SetlistDetailScreen = () => {
               </Text>
             </View>
           </View>
-          <Pressable onPress={() => handleRemoveSong(item.id, item.song?.title ?? 'this song')}>
+          <Pressable
+            onPress={(e) => {
+              e?.stopPropagation?.();
+              handleRemoveSong(item.id, item.song?.title ?? 'this song');
+            }}
+            onPressIn={(e) => e?.stopPropagation?.()}
+            hitSlop={8}
+            style={{ padding: 4 }}
+          >
             <Ionicons name="trash-outline" size={20} color="#ff3b30" />
           </Pressable>
         </View>
@@ -227,21 +242,36 @@ export const SetlistDetailScreen = () => {
   return (
     <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
       <View style={styles.header}>
-        <Pressable style={styles.headerButton} onPress={() => navigation.goBack()}>
+        <Pressable
+          style={styles.headerButton}
+          onPress={() => navigation.goBack()}
+          hitSlop={8}
+        >
           <Ionicons name="arrow-back" size={24} color="#ffffff" />
         </Pressable>
         <Text style={[styles.headerTitle, { color: '#ffffff' }]} numberOfLines={1}>
           {setlist.name}
         </Text>
-        <View style={styles.headerActions}>
-          {/* Add songs (+) icon */}
-          <Pressable style={styles.headerButton} onPress={() => setShowAddSongsModal(true)}>
+        <View style={styles.headerActions} pointerEvents="box-none">
+          <Pressable
+            style={styles.headerButton}
+            onPress={() => setShowAddSongsModal(true)}
+            hitSlop={8}
+          >
             <Ionicons name="add" size={22} color="#ffffff" />
           </Pressable>
-          <Pressable style={styles.headerButton} onPress={() => setShowEditModal(true)}>
+          <Pressable
+            style={styles.headerButton}
+            onPress={() => setShowEditModal(true)}
+            hitSlop={8}
+          >
             <Ionicons name="create-outline" size={22} color="#ffffff" />
           </Pressable>
-          <Pressable style={styles.headerButton} onPress={handleDeleteSetlist}>
+          <Pressable
+            style={styles.headerButton}
+            onPress={handleDeleteSetlist}
+            hitSlop={8}
+          >
             <Ionicons name="trash-outline" size={22} color="#ffffff" />
           </Pressable>
         </View>

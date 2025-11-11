@@ -204,29 +204,20 @@ export const AddSongModal = ({
   };
 
   return (
-    <Modal
-      visible={visible}
-      transparent
-      animationType="slide"
-      onRequestClose={handleClose}
-    >
-      <View style={styles.overlay}>
-        <View style={[styles.modalContent, { backgroundColor: '#ffffff' }]}>
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={handleClose}>
+      <View style={styles.overlayCentered}>
+        <Pressable style={styles.backdrop} onPress={handleClose} />
+        <View style={[styles.modalCard, { backgroundColor: '#ffffff' }]}>
           <View style={styles.header}>
-            <Text style={[theme.typography.title1, { color: '#1c1c1e' }]}>
+            <Text style={[theme.typography.title1, { color: '#1c1c1e', textAlign: 'center' }]}>
               {isEditMode ? 'Edit Song' : 'Add Song'}
             </Text>
-            <Text
-              style={[
-                theme.typography.body,
-                { color: '#6b6b71', marginTop: 4 },
-              ]}
-            >
+            <Text style={[theme.typography.body, { color: '#6b6b71', marginTop: 4, textAlign: 'center' }]}>
               {isEditMode ? `Update "${song?.title}"` : `Add a new song to ${activeBand?.name}`}
             </Text>
           </View>
 
-          <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
+          <ScrollView style={styles.scrollView} contentContainerStyle={{ paddingBottom: 8 }} showsVerticalScrollIndicator={false}>
             {/* Artist */}
             <Text style={[styles.label, theme.typography.subheadline, { color: '#1c1c1e' }]}>
               Artist <Text style={{ color: '#ff3b30' }}>*</Text>
@@ -343,19 +334,11 @@ export const AddSongModal = ({
             />
           </ScrollView>
 
-          <View style={styles.buttonContainer}>
-            <ThemedButton
-              label="Cancel"
-              onPress={handleClose}
-              backgroundColor="transparent"
-              style={[styles.button, { borderWidth: 1, borderColor: '#133053' }]}
-              textStyle={{ color: '#133053' }}
-              disabled={isSubmitting}
-            />
+          <View style={styles.footerRow}>
             <ThemedButton
               label={isSubmitting ? (isEditMode ? 'Saving...' : 'Adding...') : (isEditMode ? 'Save Changes' : 'Add Song')}
               onPress={handleAddSong}
-              style={styles.button}
+              style={styles.primaryButton}
               disabled={isSubmitting || !title.trim() || !artist.trim()}
             />
           </View>
@@ -366,29 +349,33 @@ export const AddSongModal = ({
 };
 
 const styles = StyleSheet.create({
-  overlay: {
+  overlayCentered: {
     flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'flex-end',
   },
-  modalContent: {
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    paddingTop: 24,
-    paddingBottom: 24,
-    paddingHorizontal: 24,
-    maxHeight: '90%',
+  backdrop: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  modalCard: {
+    width: '80%',
+    maxHeight: '80%',
+    borderRadius: 18,
+    paddingTop: 20,
+    paddingBottom: 16,
+    paddingHorizontal: 16,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: -2 },
+    shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.25,
-    shadowRadius: 8,
-    elevation: 5,
+    shadowRadius: 20,
+    elevation: 8,
   },
   header: {
     marginBottom: 20,
   },
   scrollView: {
-    marginBottom: 20,
+    marginBottom: 12,
   },
   label: {
     marginTop: 16,
@@ -432,11 +419,11 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     minHeight: 100,
   },
-  buttonContainer: {
+  footerRow: {
     flexDirection: 'row',
     gap: 12,
   },
-  button: {
+  primaryButton: {
     flex: 1,
   },
 });

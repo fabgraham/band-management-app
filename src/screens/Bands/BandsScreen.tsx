@@ -212,7 +212,8 @@ const styles = StyleSheet.create({
   },
   cardLabel: {
     color: '#6b6b71',
-    fontSize: 14,
+    fontSize: 20,
+    fontWeight: '700',
     marginBottom: 4,
     textTransform: 'none',
   },

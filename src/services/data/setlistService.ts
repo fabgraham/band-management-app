@@ -19,7 +19,7 @@ const SETLIST_SONG_FIELDS = `
   id,
   setlist_id,
   song_id,
-  order_index,
+  position,
   created_at,
   song:songs (${SONG_FIELDS})
 `;
@@ -44,7 +44,7 @@ const mapSetlistRows = (rows: any[]): SetlistDetail[] =>
         id: entry.id,
         setlist_id: entry.setlist_id,
         song_id: entry.song_id,
-        order_index: entry.order_index,
+        order_index: entry.position,
         created_at: entry.created_at,
         song: entry.song,
       }))
@@ -135,9 +135,21 @@ export const updateSetlist = async (
 };
 
 export const deleteSetlist = async (setlistId: string): Promise<void> => {
-  const { error } = await supabase.from(SETLISTS_TABLE).delete().eq('id', setlistId);
+  console.log('[setlistService] deleteSetlist start', { setlistId });
+  const { data, error } = await supabase
+    .from(SETLISTS_TABLE)
+    .delete()
+    .eq('id', setlistId)
+    .select('id');
 
   handleError(error, 'Failed to delete setlist');
+
+  const deletedCount = (data?.length ?? 0);
+  console.log('[setlistService] deleteSetlist result', { deletedCount });
+
+  if (deletedCount === 0) {
+    throw new Error('No setlist was deleted. It may not exist or you may not have permission.');
+  }
 };
 
 export const getSetlistCount = async (bandId: string): Promise<number> => {
@@ -154,22 +166,26 @@ export const getSetlistCount = async (bandId: string): Promise<number> => {
 const getNextOrderIndex = async (setlistId: string): Promise<number> => {
   const { data, error } = await supabase
     .from(SETLIST_SONGS_TABLE)
-    .select('order_index')
+    .select('position')
     .eq('setlist_id', setlistId)
-    .order('order_index', { ascending: false })
+    .order('position', { ascending: false })
     .limit(1);
 
   handleError(error, 'Failed to determine next order index');
 
   if (!data || data.length === 0) {
-    return 0;
+    return 1; // Start at 1, not 0
   }
 
-  return data[0].order_index ?? 0;
+  return (data[0].position ?? 0) + 1; // Return next available position
 };
 
-export const addSongsToSetlist = async (setlistId: string, songIds: string[]): Promise<void> => {
-  if (!songIds.length) return;
+export const addSongsToSetlist = async (
+  setlistId: string,
+  songIds: string[],
+): Promise<{ insertedCount: number; skippedCount: number }> => {
+  console.log('[setlistService] addSongsToSetlist start', { setlistId, requestedCount: songIds.length });
+  if (!songIds.length) return { insertedCount: 0, skippedCount: 0 };
 
   const { data: existingRows, error: existingError } = await supabase
     .from(SETLIST_SONGS_TABLE)
@@ -181,9 +197,11 @@ export const addSongsToSetlist = async (setlistId: string, songIds: string[]): P
 
   const existingSongIds = new Set((existingRows ?? []).map((row) => row.song_id));
   const filteredSongIds = songIds.filter((id) => !existingSongIds.has(id));
+  const skippedCount = songIds.length - filteredSongIds.length;
 
   if (!filteredSongIds.length) {
-    return;
+    console.log('[setlistService] addSongsToSetlist no-op: all duplicates', { skippedCount });
+    return { insertedCount: 0, skippedCount };
   }
 
   const startingIndex = await getNextOrderIndex(setlistId);
@@ -191,12 +209,19 @@ export const addSongsToSetlist = async (setlistId: string, songIds: string[]): P
   const payload = filteredSongIds.map((songId, idx) => ({
     setlist_id: setlistId,
     song_id: songId,
-    order_index: startingIndex + idx + 1,
+    position: startingIndex + idx,
   }));
 
-  const { error } = await supabase.from(SETLIST_SONGS_TABLE).insert(payload);
+  const { data, error } = await supabase
+    .from(SETLIST_SONGS_TABLE)
+    .insert(payload)
+    .select('id');
 
   handleError(error, 'Failed to add song to setlist');
+
+  const insertedCount = (data?.length ?? 0);
+  console.log('[setlistService] addSongsToSetlist result', { insertedCount, skippedCount });
+  return { insertedCount, skippedCount };
 };
 
 export const removeSongFromSetlist = async (entryId: string): Promise<void> => {
@@ -211,7 +236,7 @@ export const reorderSetlistSongs = async (updates: ReorderPayload[]): Promise<vo
   const { error } = await supabase.from(SETLIST_SONGS_TABLE).upsert(
     updates.map((item) => ({
       id: item.id,
-      order_index: item.order_index,
+      position: item.order_index,
     })),
     { onConflict: 'id' },
   );
