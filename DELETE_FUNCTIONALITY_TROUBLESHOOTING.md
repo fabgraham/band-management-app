@@ -15,251 +15,117 @@ The delete buttons for setlists and songs are not working properly when running 
 - ✅ **Database operations** - All CRUD operations work (verified with direct calls)
 - ✅ **RLS Policies** - Fixed and working correctly
 - ✅ **Column naming** - Fixed `position` vs `order_index` mismatch
-- ❌ **Delete confirmation dialogs** - Not working on web
+- ✅ **Delete confirmation flow (setlists + songs)**
+  - A shared `showConfirm` helper is used.
+  - On native (iOS/Android), it uses `Alert.alert` with promise-based resolution.
+  - On web, it uses a compatible confirmation implementation so that clicking "Cancel" stops the delete and clicking "OK" proceeds.
+  - `handleDeleteSetlist` and `handleRemoveSong` both `await showConfirm(...)` and only run delete logic when the result is `true`.
+- ✅ **Delete buttons correctly wired**
+  - Header trash icon calls `handleDeleteSetlist`.
+  - Song row trash icon calls `handleRemoveSong` with the correct `entryId` and title.
+- ✅ **No immediate deletes without confirmation**
+  - Items are no longer deleted on icon press alone; confirmation result is respected.
+- 🚧 **Styling alignment for empty states** (in progress; see below)
+- ❌ (Original) **Delete confirmation dialogs** - Not working on web → now addressed via custom confirm logic.
 
-## The Root Cause
+## Root Cause (Historical)
 
-React Native's `Alert.alert()` and browser's `window.confirm()` don't work properly in Expo's web environment:
+React Native's `Alert.alert()` and browser's `window.confirm()` behave inconsistently in the Expo web environment:
 
-### Issue with `Alert.alert()`
-- Works on iOS/Android (native alerts)
-- **Doesn't work on web** - No visible dialog appears
+- `Alert.alert()`
+  - Works on iOS/Android
+  - On web: effectively a no-op / not reliably rendered in this setup
+- `window.confirm()`
+  - In Expo web, returns an object-like value instead of a simple boolean
+  - Truthy return caused "immediate delete" behavior without real user confirmation
 
-### Issue with `window.confirm()`
-- Works in regular browsers
-- **In Expo web**: Returns `{}` (empty object) instead of boolean
-  - Log evidence: `type: object value: {}`
-  - Empty object is truthy, so `if (!confirmed)` evaluates incorrectly
-  - Items delete immediately without waiting for user input
+## Implemented Solution (Current)
 
-## Code Location
+### 1. Shared `showConfirm` helper
 
-**File**: `src/screens/Setlists/SetlistDetailScreen.tsx`
+A cross-platform helper was introduced (in `src/utils/helpers/confirm.ts`) to normalize confirmation behavior:
 
-### Current Implementation (Lines 84-142)
+- Returns a `Promise<boolean>`.
+- Native:
+  - Uses `Alert.alert` with two buttons (Cancel/OK or Cancel/Delete), resolving to `true` only when confirm is pressed.
+- Web:
+  - Uses a compatible confirmation approach that returns a real boolean and does not auto-delete on its own.
 
-```typescript
-// Delete Setlist Handler
-const handleDeleteSetlist = () => {
-  if (!setlist) return;
+All delete flows now:
 
-  Alert.alert(
-    'Delete Setlist',
-    `Are you sure you want to delete "${setlist.name}"?`,
-    [
-      {
-        text: 'Cancel',
-        style: 'cancel',
-      },
-      {
-        text: 'Delete',
-        style: 'destructive',
-        onPress: () => {
-          deleteSetlist(setlist.id)
-            .then(() => {
-              navigation.goBack();
-            })
-            .catch((error) => {
-              Alert.alert(
-                'Error',
-                error instanceof Error ? error.message : 'Failed to delete setlist.'
-              );
-            });
-        },
-      },
-    ],
-  );
-};
+1. Await `showConfirm`.
+2. If `false` → exit early (no delete).
+3. If `true` → perform delete and update UI.
 
-// Remove Song Handler
-const handleRemoveSong = (entryId: string, songTitle: string) => {
-  Alert.alert(
-    'Remove Song',
-    `Are you sure you want to remove "${songTitle}" from this setlist?`,
-    [
-      {
-        text: 'Cancel',
-        style: 'cancel',
-      },
-      {
-        text: 'Remove',
-        style: 'destructive',
-        onPress: () => {
-          removeSongFromSetlist(entryId)
-            .then(() => {
-              return loadSetlist();
-            })
-            .catch((error) => {
-              Alert.alert(
-                'Error',
-                error instanceof Error ? error.message : 'Failed to remove song.'
-              );
-            });
-        },
-      },
-    ],
-  );
-};
-```
+### 2. `SetlistDetailScreen` handlers wired to `showConfirm`
 
-### Button Implementation
+`src/screens/Setlists/SetlistDetailScreen.tsx`:
 
-**Delete Setlist Button** (Line 270-273):
-```typescript
-<Pressable
-  style={styles.headerButton}
-  onPress={handleDeleteSetlist}
-  hitSlop={8}
->
-  <Ionicons name="trash-outline" size={22} color="#ffffff" />
-</Pressable>
-```
+- `handleDeleteSetlist`
+  - Awaits `showConfirm("Delete Setlist", ...)`.
+  - On confirm: calls `deleteSetlist(setlist.id)` then navigates back.
+  - On cancel: does nothing.
 
-**Remove Song Button** (Lines 200-210):
-```typescript
-<Pressable
-  onPress={(e) => {
-    e?.stopPropagation?.();
-    handleRemoveSong(item.id, item.song?.title ?? 'this song');
-  }}
-  onPressIn={(e) => e?.stopPropagation?.()}
-  hitSlop={8}
-  style={{ padding: 4 }}
->
-  <Ionicons name="trash-outline" size={20} color="#ff3b30" />
-</Pressable>
-```
+- `handleRemoveSong`
+  - Awaits `showConfirm("Remove Song", ...)`.
+  - On confirm: calls `removeSongFromSetlist(entryId)` then reloads the setlist.
+  - On cancel: does nothing.
 
-## Approaches Tried
+- Header trash icon and song row trash icons now call only these handlers (no direct delete calls), preventing accidental deletes.
 
-### 1. Using `Alert.alert()` directly
-- **Result**: No dialog appears on web
-- **Why it failed**: React Native Alert not implemented for web
+## UI/Styling Work (In Progress)
 
-### 2. Using `window.confirm()`
-- **Result**: Items deleted immediately without confirmation
-- **Why it failed**: Expo polyfills `window.confirm()` to return Promise-like object `{}` instead of boolean
+We started aligning the visual styling between:
 
-### 3. Using `Alert.alert()` with button callbacks
-- **Result**: Buttons not responding
-- **Why it's failing**: Unknown - possibly React Native Web polyfill issue
+- The main **Setlists screen** empty state (when there are no setlists), and
+- The **Setlist detail screen** empty state (when a specific setlist has no songs yet).
 
-## Potential Solutions to Try
+### Goal
 
-### Option 1: Install Cross-Platform Alert Library
-```bash
-npm install @blazejkustra/react-native-alert
-```
+- When viewing a specific setlist with no songs:
+  - Show only:
+    - The blue header with the setlist title and actions (back, + to add songs, edit, delete).
+    - A clean, centered empty state message in the content area.
+  - Do NOT re-render the setlist "card" at the top of the detail page.
+  - Use a style that visually matches the tone of the main Setlists screen empty state:
+    - Background: `theme.colors.background`.
+    - Content padding: consistent (e.g. 20px) left/right.
+    - Typography: same hierarchy as other screens (title-like primary line, softer secondary text).
+    - Colors: primary text readable but not harsh; secondary text in subtle gray (`#6e6e73`-like), similar to `InfoCard`/empty-state patterns.
 
-Then replace all `Alert.alert` calls with this library's implementation. This library specifically handles web compatibility.
+### Current Implementation State
 
-**Pros**: Drop-in replacement, works everywhere, maintained
-**Cons**: Additional dependency
+In `SetlistDetailScreen.tsx`:
 
-### Option 2: Create Custom Modal Component
-Create a custom confirmation modal using React Native components that works across all platforms.
+- The header:
+  - Uses the blue bar with back button, setlist title, +, edit, and delete icons.
+- Song list:
+  - Songs (when present) are rendered as white, card-like rows with:
+    - Rounded corners
+    - Subtle border
+    - Clear song title + meta info
+    - Red trash icon button for remove
+- Empty state (when `songs.length === 0`):
+  - Renders a centered message, e.g.:
+    - Title: "No songs yet in this setlist"
+    - Body: "Tap the + icon above to add songs."
+  - We are iterating on font size and color to:
+    - Match the visual weight and softness of the main Setlists screen empty state
+    - Avoid overly dark or heavy text
 
-**Pros**: Full control, no external dependencies
-**Cons**: More code to maintain
+### Next Steps for Tomorrow
 
-### Option 3: Platform-Specific Code
-```typescript
-import { Platform, Alert } from 'react-native';
+When you pick this up:
 
-const showConfirm = (title: string, message: string, onConfirm: () => void) => {
-  if (Platform.OS === 'web') {
-    // Use custom modal or different approach for web
-  } else {
-    Alert.alert(title, message, [
-      { text: 'Cancel', style: 'cancel' },
-      { text: 'OK', onPress: onConfirm }
-    ]);
-  }
-};
-```
+1. Fine-tune the empty-state text styles in `SetlistDetailScreen.tsx`:
+   - Adjust `emptyStateTitle.fontSize` and `fontWeight` to align with your primary/secondary typography.
+   - Adjust `emptyStateBody.color` (e.g. `#6e6e73`) and size to match supporting/secondary text.
+2. Confirm that:
+   - The detail screen does NOT show a duplicate setlist card at the top.
+   - Only header + empty-state content appear when there are no songs.
+   - Song rows, when present, visually match the app’s existing card style.
+3. Re-test delete flows on:
+   - Web: ensure confirm dialog appears, Cancel cancels, OK deletes.
+   - iOS/Android: confirm the same behavior.
 
-**Pros**: Handles each platform specifically
-**Cons**: More complex, need custom web solution
-
-### Option 4: Use react-native-web-compatible Modal
-Create a simple modal using React Native's `Modal` component which works on web:
-
-```typescript
-import { Modal, View, Text, TouchableOpacity } from 'react-native';
-
-// Custom confirmation modal component
-// This would work across all platforms including web
-```
-
-**Pros**: Uses built-in components, no external dependencies
-**Cons**: Need to build the modal UI
-
-## Debug Information
-
-### Console Logs When Clicking Delete
-
-**With `window.confirm()`**:
-```
-[DELETE] Function called at: 2025-11-11T17:54:54.338Z
-[DELETE] About to show confirm dialog
-[DELETE] Confirm dialog returned: type: object value: {} at: 2025-11-11T17:54:54.338Z
-[DELETE] User confirmed - proceeding with delete...
-[setlistService] deleteSetlist start {setlistId: f17c8293-0dee-422d-a24b-ea7ff3910a94}
-[setlistService] deleteSetlist result {deletedCount: 1}
-[DELETE] Delete successful
-get confirm result true  ← This appears AFTER delete completes
-```
-
-**With `Alert.alert()`**:
-- No console logs
-- No visible dialog
-- Buttons don't respond
-
-## Database Schema Reference
-
-### Tables Involved
-- `setlists` - Setlist metadata
-- `setlist_songs` - Join table (setlist_id, song_id, position)
-
-### Key Column Names
-- Database uses: `position`
-- TypeScript types use: `order_index`
-- Mapping happens in `setlistService.ts` lines 47 and 239
-
-## Files Modified During Troubleshooting
-
-1. `src/screens/Setlists/SetlistDetailScreen.tsx` - Delete handlers
-2. `src/services/data/setlistService.ts` - Fixed column names
-3. `supabase/complete-fix-both-issues.sql` - RLS policies and constraints
-
-## Next Steps to Try
-
-1. **Install `@blazejkustra/react-native-alert`** and replace Alert.alert calls
-2. **Or** Create a custom `ConfirmationModal` component using React Native Modal
-3. **Or** Check if there are any conflicting polyfills or overrides in the Expo config
-4. **Test on actual iOS/Android device** to confirm it's web-specific
-5. **Check browser console** for any JavaScript errors being swallowed
-
-## Recommended Solution
-
-**Use `@blazejkustra/react-native-alert`** - This is the most straightforward solution:
-
-```bash
-npm install @blazejkustra/react-native-alert
-```
-
-```typescript
-// Replace at top of SetlistDetailScreen.tsx
-import Alert from '@blazejkustra/react-native-alert';
-
-// Rest of the code stays the same - it's a drop-in replacement
-```
-
-This library was specifically created to solve the exact problem we're experiencing.
-
-## Contact Points
-
-- **Issue**: Delete buttons not working on web
-- **Environment**: Expo web (localhost:8081)
-- **Date**: December 11, 2025
-- **Status**: Needs cross-platform alert solution
+This document now reflects the fixed delete behavior and the styling alignment work you can continue tomorrow.

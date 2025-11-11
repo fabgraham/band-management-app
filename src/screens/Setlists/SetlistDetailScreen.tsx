@@ -26,6 +26,7 @@ import { BandsStackParamList } from '../../navigation/bandsStack.types';
 // Removed in-card Add Songs button; using header + icon instead
 import { CreateSetlistModal } from '../../components/Modals/CreateSetlistModal';
 import { AddSetlistSongsModal } from '../../components/Modals/AddSetlistSongsModal';
+import { showConfirm } from '../../utils/helpers/confirm';
 
 type NavigationProp = NativeStackNavigationProp<BandsStackParamList, 'SetlistDetail'>;
 type RouteProps = RouteProp<BandsStackParamList, 'SetlistDetail'>;
@@ -81,64 +82,50 @@ export const SetlistDetailScreen = () => {
     return new Date(`${value}T00:00:00`).toLocaleDateString();
   };
 
-  const handleDeleteSetlist = () => {
+  // Delete Setlist Handler
+  const handleDeleteSetlist = async () => {
     if (!setlist) return;
 
-    Alert.alert(
+    const confirmed = await showConfirm(
       'Delete Setlist',
-      `Are you sure you want to delete "${setlist.name}"?`,
-      [
-        {
-          text: 'Cancel',
-          style: 'cancel',
-        },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: () => {
-            deleteSetlist(setlist.id)
-              .then(() => {
-                navigation.goBack();
-              })
-              .catch((error) => {
-                Alert.alert(
-                  'Error',
-                  error instanceof Error ? error.message : 'Failed to delete setlist.'
-                );
-              });
-          },
-        },
-      ],
+      `Are you sure you want to delete "${setlist.name}"?`
     );
+
+    if (!confirmed) {
+      return;
+    }
+
+    try {
+      await deleteSetlist(setlist.id);
+      navigation.goBack();
+    } catch (error) {
+      Alert.alert(
+        'Error',
+        error instanceof Error ? error.message : 'Failed to delete setlist.'
+      );
+    }
   };
 
-  const handleRemoveSong = (entryId: string, songTitle: string) => {
-    Alert.alert(
+  // Remove Song Handler
+  const handleRemoveSong = async (entryId: string, songTitle: string) => {
+    const confirmed = await showConfirm(
       'Remove Song',
-      `Are you sure you want to remove "${songTitle}" from this setlist?`,
-      [
-        {
-          text: 'Cancel',
-          style: 'cancel',
-        },
-        {
-          text: 'Remove',
-          style: 'destructive',
-          onPress: () => {
-            removeSongFromSetlist(entryId)
-              .then(() => {
-                return loadSetlist();
-              })
-              .catch((error) => {
-                Alert.alert(
-                  'Error',
-                  error instanceof Error ? error.message : 'Failed to remove song.'
-                );
-              });
-          },
-        },
-      ],
+      `Are you sure you want to remove "${songTitle}" from this setlist?`
     );
+
+    if (!confirmed) {
+      return;
+    }
+
+    try {
+      await removeSongFromSetlist(entryId);
+      await loadSetlist();
+    } catch (error) {
+      Alert.alert(
+        'Error',
+        error instanceof Error ? error.message : 'Failed to remove song.'
+      );
+    }
   };
 
   const handleDragEnd = async ({ data }: { data: SetlistSongEntry[] }) => {
@@ -164,67 +151,42 @@ export const SetlistDetailScreen = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
   };
 
-  const renderItem = ({ item, drag, isActive, getIndex }: RenderItemParams<SetlistSongEntry>) => {
-    const index = (getIndex?.() ?? 0) + 1;
-    const duration = item.song?.duration_seconds;
-    const minutes = duration ? Math.floor(duration / 60) : null;
-    const seconds = duration ? duration % 60 : null;
-
-    return (
-      <Pressable
-        style={[
-          styles.songCard,
-          { backgroundColor: theme.colors.card, borderColor: isActive ? theme.colors.primary : '#e5e5ea' },
-        ]}
-        onLongPress={drag}
-        delayLongPress={80}
-      >
-        <View style={styles.songHeader}>
-          <View style={styles.songTitleWrapper}>
-            <View style={styles.songIndexBadge}>
-              <Text style={styles.songIndexText}>{index}</Text>
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={[theme.typography.callout, { color: '#1c1c1e' }]}>
-                {item.song?.title ?? 'Untitled'}
-              </Text>
-              <Text style={{ color: '#6e6e73', marginTop: 4 }}>
-                {item.song?.artist ?? 'Unknown Artist'}
-              </Text>
-            </View>
+  const renderItem = ({ item, drag, isActive }: RenderItemParams<SetlistSongEntry>) => (
+    <Pressable
+      onLongPress={drag}
+      disabled={isActive}
+      style={[styles.songCard, isActive && { opacity: 0.9 }]}
+    >
+      <View style={styles.songHeader}>
+        <View style={styles.songTitleWrapper}>
+          <View style={styles.songIndexBadge}>
+            <Text style={styles.songIndexText}>{item.order_index}</Text>
           </View>
-          <Pressable
-            onPress={(e) => {
-              e?.stopPropagation?.();
-              handleRemoveSong(item.id, item.song?.title ?? 'this song');
-            }}
-            onPressIn={(e) => e?.stopPropagation?.()}
-            hitSlop={8}
-            style={{ padding: 4 }}
-          >
-            <Ionicons name="trash-outline" size={20} color="#ff3b30" />
-          </Pressable>
+          <View>
+            <Text style={styles.songTitle} numberOfLines={1}>
+              {item.song.title}
+            </Text>
+            <Text style={styles.songMeta} numberOfLines={1}>
+              {item.song.artist}
+            </Text>
+          </View>
         </View>
-
-        <View style={styles.songMetaRow}>
-          {item.song?.key && (
-            <View style={styles.metaChip}>
-              <Ionicons name="musical-note" size={14} color={theme.colors.primary} />
-              <Text style={styles.metaChipText}>{item.song.key}</Text>
-            </View>
-          )}
-          {duration && (
-            <View style={styles.metaChip}>
-              <Ionicons name="time-outline" size={14} color={theme.colors.primary} />
-              <Text style={styles.metaChipText}>
-                {minutes}:{seconds?.toString().padStart(2, '0')}
-              </Text>
-            </View>
-          )}
+        <Pressable
+          style={styles.songDeleteButton}
+          onPress={() => handleRemoveSong(item.id, item.song.title)}
+          hitSlop={8}
+        >
+          <Ionicons name="trash-outline" size={20} color="#ff3b30" />
+        </Pressable>
+      </View>
+      {/* optional meta row if you were using it before */}
+      {/* <View style={styles.songMetaRow}>
+        <View style={styles.metaChip}>
+          <Text style={styles.metaChipText}>Key: {item.song.key}</Text>
         </View>
-      </Pressable>
-    );
-  };
+      </View> */}
+    </Pressable>
+  );
 
   if (loading) {
     return (
@@ -240,7 +202,7 @@ export const SetlistDetailScreen = () => {
   }
 
   return (
-    <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
+    <View style={[styles.container, { backgroundColor: theme.colors.background }]}> 
       <View style={styles.header}>
         <Pressable
           style={styles.headerButton}
@@ -272,46 +234,29 @@ export const SetlistDetailScreen = () => {
             onPress={handleDeleteSetlist}
             hitSlop={8}
           >
-            <Ionicons name="trash-outline" size={22} color="#ffffff" />
+            <Ionicons name="trash-outline" size={22} color="#ff3b30" />
           </Pressable>
         </View>
       </View>
 
       <View style={styles.content}>
-        <View style={styles.infoCard}>
-          <Text style={[theme.typography.title2, { color: '#1c1c1e' }]}>{setlist.name}</Text>
-          <Text style={{ color: '#6e6e73', marginTop: 4 }}>{formatDate(setlist.show_date)}</Text>
-          <View style={styles.statsRow}>
-            <View>
-              <Text style={styles.statLabel}>Songs</Text>
-              <Text style={styles.statValue}>{songs.length}</Text>
-            </View>
-            <View>
-              <Text style={styles.statLabel}>Duration</Text>
-              <Text style={styles.statValue}>{totalDurationLabel}</Text>
-            </View>
-          </View>
-        </View>
-
         {songs.length === 0 ? (
-          <View style={styles.emptyState}>
-            <Ionicons name="list-circle-outline" size={72} color="#c7c7cc" />
-            <Text style={[theme.typography.title2, { color: '#1c1c1e', marginTop: 16 }]}>
-              You have no songs in this setlist yet.
+          <View style={styles.emptyStateContainer}>
+            <Text style={[styles.emptyStateTitle, { color: theme.colors.text }]}>
+              No songs yet in this setlist
             </Text>
-            <Text style={{ color: '#6e6e73', marginTop: 8, textAlign: 'center' }}>
-              Tap the + icon on the top menu to add songs.
+            <Text style={styles.emptyStateBody}>
+              Tap the + icon above to add songs.
             </Text>
           </View>
         ) : (
           <DraggableFlatList
             data={songs}
             keyExtractor={(item) => item.id}
-            onDragEnd={handleDragEnd}
-            onDragBegin={handleDragBegin}
             renderItem={renderItem}
-            containerStyle={{ paddingBottom: 40 }}
-            contentContainerStyle={{ paddingBottom: 40 }}
+            onDragBegin={handleDragBegin}
+            onDragEnd={handleDragEnd}
+            contentContainerStyle={styles.listContent}
           />
         )}
       </View>
@@ -380,47 +325,24 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
-    paddingHorizontal: 20,
-    paddingTop: 16,
-  },
-  infoCard: {
-    backgroundColor: '#ffffff',
-    borderRadius: 16,
     padding: 20,
-    borderWidth: 1,
-    borderColor: '#e5e5ea',
-    marginBottom: 20,
   },
-  statsRow: {
-    flexDirection: 'row',
-    gap: 32,
-    marginTop: 16,
+  listContent: {
+    paddingBottom: 16,
   },
-  statLabel: {
-    color: '#6e6e73',
-    fontSize: 13,
-  },
-  statValue: {
-    color: '#1c1c1e',
-    fontSize: 20,
-    fontWeight: '700',
-  },
-  emptyState: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 40,
-  },
+  // Song rows: same clean, card-like feel as InfoCard
   songCard: {
+    backgroundColor: '#ffffff',
     borderRadius: 16,
     padding: 16,
     borderWidth: 1,
+    borderColor: '#e5e5ea',
     marginBottom: 12,
   },
   songHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 12,
   },
   songTitleWrapper: {
     flexDirection: 'row',
@@ -440,22 +362,34 @@ const styles = StyleSheet.create({
     color: '#133053',
     fontWeight: '700',
   },
-  songMetaRow: {
-    flexDirection: 'row',
-    gap: 12,
-    flexWrap: 'wrap',
-  },
-  metaChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(19,48,83,0.08)',
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 12,
-    gap: 6,
-  },
-  metaChipText: {
-    color: '#133053',
+  songTitle: {
+    fontSize: 16,
     fontWeight: '600',
+    color: '#1c1c1e',
+  },
+  songMeta: {
+    marginTop: 2,
+    fontSize: 13,
+    color: '#6e6e73',
+  },
+  songDeleteButton: {
+    paddingHorizontal: 4,
+    paddingVertical: 4,
+  },
+  // Empty state visually aligned with main SetlistsScreen empty state
+  emptyStateContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  emptyStateTitle: {
+    fontSize: 20,
+    fontWeight: '600',
+  },
+  emptyStateBody: {
+    fontSize: 15,
+    color: '#6e6e73',
+    marginTop: 4,
+    textAlign: 'center',
   },
 });
