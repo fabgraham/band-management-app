@@ -42,7 +42,7 @@ export const BandsScreen = () => {
   return (
     <>
       <ScrollView
-        style={[styles.screen, { backgroundColor: '#123053' }]}
+        style={[styles.screen, { backgroundColor: '#133053' }]}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
         }

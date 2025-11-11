@@ -98,7 +98,7 @@ export const CreateSetlistModal = ({
     <Modal visible={visible} animationType="fade" transparent onRequestClose={handleClose}>
       <View style={styles.overlay}>
         <Pressable style={styles.backdrop} onPress={handleClose} />
-        <View style={[styles.modalContainer, { backgroundColor: theme.colors.card }]}>
+        <View style={[styles.modalContainer, isEditMode ? styles.modalContainerSmall : null, { backgroundColor: theme.colors.card }]}>
           <Text style={[styles.title, { color: theme.colors.text }]}>
             {isEditMode ? 'Edit Setlist' : 'Add Setlist'}
           </Text>
@@ -111,7 +111,7 @@ export const CreateSetlistModal = ({
             maxLength={100}
           />
           <ThemedButton
-            label={isEditMode ? 'Save Setlist' : 'Add Setlist'}
+            label={isEditMode ? 'Save Changes' : 'Add Setlist'}
             onPress={handleSave}
             disabled={isSubmitting}
           />
@@ -141,6 +141,9 @@ const styles = StyleSheet.create({
     shadowRadius: 20,
     elevation: 8,
     gap: 16,
+  },
+  modalContainerSmall: {
+    width: '40%',
   },
   title: {
     fontSize: 20,

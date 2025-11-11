@@ -87,7 +87,7 @@ export const LoginScreen = ({ navigation }: LoginScreenProps) => {
             disabled={!isValid || loading}
             style={styles.actionButton}
             textStyle={styles.actionText}
-            backgroundColor="#123053"
+            backgroundColor="#133053"
           />
 
           <Pressable style={styles.forgotLink} onPress={() => navigation.navigate('ForgotPassword')}>
@@ -107,7 +107,7 @@ export const LoginScreen = ({ navigation }: LoginScreenProps) => {
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: '#123053',
+    backgroundColor: '#133053',
     justifyContent: 'center',
     alignItems: 'center',
   },

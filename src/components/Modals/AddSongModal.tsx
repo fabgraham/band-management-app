@@ -348,14 +348,13 @@ export const AddSongModal = ({
               label="Cancel"
               onPress={handleClose}
               backgroundColor="transparent"
-              style={[styles.button, { borderWidth: 1, borderColor: '#123053' }]}
-              textStyle={{ color: '#123053' }}
+              style={[styles.button, { borderWidth: 1, borderColor: '#133053' }]}
+              textStyle={{ color: '#133053' }}
               disabled={isSubmitting}
             />
             <ThemedButton
               label={isSubmitting ? (isEditMode ? 'Saving...' : 'Adding...') : (isEditMode ? 'Save Changes' : 'Add Song')}
               onPress={handleAddSong}
-              backgroundColor="#123053"
               style={styles.button}
               disabled={isSubmitting || !title.trim() || !artist.trim()}
             />

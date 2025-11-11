@@ -647,7 +647,7 @@ export const BandDetailScreen = ({ route, navigation }: Props) => {
           <Ionicons
             name={activeTab === 'setlists' ? 'list' : 'list-outline'}
             size={28}
-            color={activeTab === 'setlists' ? '#007AFF' : '#999'}
+            color={activeTab === 'setlists' ? '#133053' : '#999'}
           />
         </Pressable>
         <Pressable
@@ -660,7 +660,7 @@ export const BandDetailScreen = ({ route, navigation }: Props) => {
           <Ionicons
             name={activeTab === 'library' ? 'musical-notes' : 'musical-notes-outline'}
             size={28}
-            color={activeTab === 'library' ? '#007AFF' : '#999'}
+            color={activeTab === 'library' ? '#133053' : '#999'}
           />
         </Pressable>
         <Pressable
@@ -673,7 +673,7 @@ export const BandDetailScreen = ({ route, navigation }: Props) => {
           <Ionicons
             name={activeTab === 'calendar' ? 'calendar' : 'calendar-outline'}
             size={28}
-            color={activeTab === 'calendar' ? '#007AFF' : '#999'}
+            color={activeTab === 'calendar' ? '#133053' : '#999'}
           />
         </Pressable>
         <Pressable
@@ -686,7 +686,7 @@ export const BandDetailScreen = ({ route, navigation }: Props) => {
           <Ionicons
             name={activeTab === 'members' ? 'people' : 'people-outline'}
             size={28}
-            color={activeTab === 'members' ? '#007AFF' : '#999'}
+            color={activeTab === 'members' ? '#133053' : '#999'}
           />
         </Pressable>
       </View>
@@ -738,7 +738,7 @@ const styles = StyleSheet.create({
     paddingTop: 20,
     paddingBottom: 20,
     paddingHorizontal: 20,
-    backgroundColor: '#123053',
+    backgroundColor: '#133053',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
@@ -790,7 +790,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
   },
   bottomTabActive: {
-    backgroundColor: 'rgba(0, 122, 255, 0.1)',
+    backgroundColor: 'rgba(19, 48, 83, 0.1)',
   },
   bottomTabText: {
     fontSize: 10,
@@ -865,7 +865,7 @@ const styles = StyleSheet.create({
   keyBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#007AFF',
+    backgroundColor: '#133053',
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 12,
@@ -891,7 +891,7 @@ const styles = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: 28,
-    backgroundColor: '#007AFF',
+    backgroundColor: '#133053',
     alignItems: 'center',
     justifyContent: 'center',
     shadowColor: '#000',

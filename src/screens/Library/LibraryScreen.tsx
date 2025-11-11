@@ -149,7 +149,7 @@ export const LibraryScreen = () => {
         </Text>
         <View style={styles.songMeta}>
           {item.key && (
-            <View style={[styles.keyBadge, { backgroundColor: '#123053' }]}>
+        <View style={[styles.keyBadge, { backgroundColor: '#133053' }]}>
               <Text style={[theme.typography.footnote, { color: '#ffffff', fontWeight: '600' }]}>
                 {item.key}
               </Text>
@@ -276,7 +276,7 @@ export const LibraryScreen = () => {
 
       {/* Add Button */}
       <Pressable
-        style={[styles.fab, { backgroundColor: '#123053' }]}
+        style={[styles.fab, { backgroundColor: '#133053' }]}
         onPress={() => setShowAddModal(true)}
       >
         <Ionicons name="add" size={28} color="#ffffff" />

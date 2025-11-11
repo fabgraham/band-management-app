@@ -72,7 +72,7 @@ export const ForgotPasswordScreen = ({ navigation }: ForgotPasswordScreenProps) 
             disabled={!isValid || loading}
             style={styles.actionButton}
             textStyle={styles.actionText}
-            backgroundColor="#123053"
+            backgroundColor="#133053"
           />
         </AuthCard>
         <AuthSwitchButton
@@ -88,7 +88,7 @@ export const ForgotPasswordScreen = ({ navigation }: ForgotPasswordScreenProps) 
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: '#123053',
+    backgroundColor: '#133053',
     justifyContent: 'center',
     alignItems: 'center',
   },

@@ -127,8 +127,8 @@ export const AddSetlistSongsModal = ({
         style={[
           styles.songRow,
           {
-            backgroundColor: isSelected ? 'rgba(0,122,255,0.08)' : '#ffffff',
-            borderColor: isSelected ? '#007AFF' : '#f2f2f7',
+            backgroundColor: isSelected ? 'rgba(19,48,83,0.08)' : '#ffffff',
+            borderColor: isSelected ? theme.colors.primary : '#f2f2f7',
           },
         ]}
         onPress={() => toggleSongSelection(item.id)}
@@ -142,25 +142,19 @@ export const AddSetlistSongsModal = ({
         <Ionicons
           name={isSelected ? 'checkbox' : 'square-outline'}
           size={24}
-          color={isSelected ? '#007AFF' : '#c7c7cc'}
+          color={isSelected ? theme.colors.primary : '#c7c7cc'}
         />
       </Pressable>
     );
   };
 
   return (
-    <Modal visible={visible} animationType="slide" onRequestClose={handleClose}>
-      <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
-        <View style={styles.header}>
-          <Text style={[theme.typography.title1, { color: theme.colors.text }]}>
-            Add Songs
-          </Text>
-          <Pressable onPress={handleClose} style={styles.closeButton}>
-            <Text style={{ fontSize: 18, color: '#6b6b71' }}>✕</Text>
-          </Pressable>
-        </View>
-
-        <View style={styles.body}>
+    <Modal visible={visible} animationType="fade" transparent onRequestClose={handleClose}>
+      <View style={styles.overlay}>
+        <Pressable style={styles.backdrop} onPress={handleClose} />
+        <View style={[styles.modalContainer, { backgroundColor: theme.colors.card }]}> 
+          <Text style={[styles.title, { color: theme.colors.text }]}>Add Songs</Text>
+          <View style={styles.body}>
           <View style={styles.searchContainer}>
             <Ionicons name="search" size={20} color="#9a9aa0" />
             <TextInput
@@ -199,31 +193,26 @@ export const AddSetlistSongsModal = ({
               </Text>
             </View>
           ) : (
-            <FlatList
-              data={filteredSongs}
-              keyExtractor={(item) => item.id}
-              renderItem={renderItem}
-              ItemSeparatorComponent={() => <View style={{ height: 12 }} />}
-              contentContainerStyle={{ paddingBottom: 24 }}
-            />
+            <View style={{ flex: 1, minHeight: 0 }}>
+              <FlatList
+                data={filteredSongs}
+                keyExtractor={(item) => item.id}
+                renderItem={renderItem}
+                ItemSeparatorComponent={() => <View style={{ height: 12 }} />}
+                contentContainerStyle={{ paddingBottom: 24 }}
+              />
+            </View>
           )}
         </View>
 
         <View style={styles.footer}>
-          <Text style={{ color: '#6e6e73' }}>
-            Selected: {selectedSongIds.length}
-          </Text>
+          <Text style={{ color: '#6e6e73' }}>Selected: {selectedSongIds.length}</Text>
           <ThemedButton
             label="Add to Setlist"
             onPress={handleAddSongs}
             disabled={selectedSongIds.length === 0 || loading}
           />
-          <ThemedButton
-            label="Cancel"
-            onPress={handleClose}
-            backgroundColor="#e5e5ea"
-            textStyle={{ color: '#1c1c1e' }}
-          />
+        </View>
         </View>
       </View>
     </Modal>
@@ -231,27 +220,37 @@ export const AddSetlistSongsModal = ({
 };
 
 const styles = StyleSheet.create({
-  container: {
+  overlay: {
     flex: 1,
-    paddingTop: 40,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    marginBottom: 12,
-  },
-  closeButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    alignItems: 'center',
     justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0,0,0,0.35)',
+  },
+  backdrop: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  modalContainer: {
+    width: '80%',
+    maxHeight: '80%',
+    borderRadius: 18,
+    paddingVertical: 16,
+    paddingHorizontal: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.25,
+    shadowRadius: 20,
+    elevation: 8,
+  },
+  title: {
+    fontSize: 20,
+    fontWeight: '600',
+    textAlign: 'center',
+    marginBottom: 8,
   },
   body: {
     flex: 1,
-    paddingHorizontal: 20,
+    minHeight: 0,
+    paddingHorizontal: 4,
   },
   searchContainer: {
     flexDirection: 'row',
@@ -284,7 +283,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   footer: {
-    paddingHorizontal: 20,
-    paddingBottom: 24,
+    paddingHorizontal: 8,
+    paddingTop: 8,
   },
 });

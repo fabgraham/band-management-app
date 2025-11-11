@@ -140,14 +140,13 @@ export const EditBandModal = ({
                 label="Cancel"
                 onPress={handleClose}
                 backgroundColor="transparent"
-                style={[styles.button, { borderWidth: 1, borderColor: '#123053' }]}
-                textStyle={{ color: '#123053' }}
+                style={[styles.button, { borderWidth: 1, borderColor: '#133053' }]}
+                textStyle={{ color: '#133053' }}
                 disabled={isSubmitting || loading}
               />
               <ThemedButton
                 label={isSubmitting ? 'Updating...' : 'Update'}
                 onPress={handleUpdateBand}
-                backgroundColor="#123053"
                 style={styles.button}
                 disabled={isSubmitting || loading || !bandName.trim()}
               />

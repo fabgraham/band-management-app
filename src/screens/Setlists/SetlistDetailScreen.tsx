@@ -23,7 +23,7 @@ import {
 } from '../../services/data/setlistService';
 import { SetlistDetail, SetlistSongEntry } from '../../types';
 import { BandsStackParamList } from '../../navigation/bandsStack.types';
-import { ThemedButton } from '../../components/Buttons/ThemedButton';
+// Removed in-card Add Songs button; using header + icon instead
 import { CreateSetlistModal } from '../../components/Modals/CreateSetlistModal';
 import { AddSetlistSongsModal } from '../../components/Modals/AddSetlistSongsModal';
 
@@ -167,7 +167,7 @@ export const SetlistDetailScreen = () => {
       <Pressable
         style={[
           styles.songCard,
-          { backgroundColor: theme.colors.card, borderColor: isActive ? '#007AFF' : '#e5e5ea' },
+          { backgroundColor: theme.colors.card, borderColor: isActive ? theme.colors.primary : '#e5e5ea' },
         ]}
         onLongPress={drag}
         delayLongPress={80}
@@ -194,13 +194,13 @@ export const SetlistDetailScreen = () => {
         <View style={styles.songMetaRow}>
           {item.song?.key && (
             <View style={styles.metaChip}>
-              <Ionicons name="musical-note" size={14} color="#007AFF" />
+              <Ionicons name="musical-note" size={14} color={theme.colors.primary} />
               <Text style={styles.metaChipText}>{item.song.key}</Text>
             </View>
           )}
           {duration && (
             <View style={styles.metaChip}>
-              <Ionicons name="time-outline" size={14} color="#007AFF" />
+              <Ionicons name="time-outline" size={14} color={theme.colors.primary} />
               <Text style={styles.metaChipText}>
                 {minutes}:{seconds?.toString().padStart(2, '0')}
               </Text>
@@ -234,6 +234,10 @@ export const SetlistDetailScreen = () => {
           {setlist.name}
         </Text>
         <View style={styles.headerActions}>
+          {/* Add songs (+) icon */}
+          <Pressable style={styles.headerButton} onPress={() => setShowAddSongsModal(true)}>
+            <Ionicons name="add" size={22} color="#ffffff" />
+          </Pressable>
           <Pressable style={styles.headerButton} onPress={() => setShowEditModal(true)}>
             <Ionicons name="create-outline" size={22} color="#ffffff" />
           </Pressable>
@@ -257,17 +261,16 @@ export const SetlistDetailScreen = () => {
               <Text style={styles.statValue}>{totalDurationLabel}</Text>
             </View>
           </View>
-          <ThemedButton label="Add Songs" onPress={() => setShowAddSongsModal(true)} />
         </View>
 
         {songs.length === 0 ? (
           <View style={styles.emptyState}>
             <Ionicons name="list-circle-outline" size={72} color="#c7c7cc" />
             <Text style={[theme.typography.title2, { color: '#1c1c1e', marginTop: 16 }]}>
-              No songs in this setlist
+              You have no songs in this setlist yet.
             </Text>
             <Text style={{ color: '#6e6e73', marginTop: 8, textAlign: 'center' }}>
-              Tap "Add Songs" to start building your set.
+              Tap the + icon on the top menu to add songs.
             </Text>
           </View>
         ) : (
@@ -319,7 +322,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   header: {
-    backgroundColor: '#123053',
+    backgroundColor: '#133053',
     paddingTop: 20,
     paddingBottom: 16,
     paddingHorizontal: 16,
@@ -337,7 +340,7 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     flex: 1,
-    fontSize: 22,
+    fontSize: 28,
     fontWeight: '700',
     marginHorizontal: 12,
   },
@@ -399,12 +402,12 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: 'rgba(0,122,255,0.12)',
+    backgroundColor: 'rgba(19,48,83,0.12)',
     alignItems: 'center',
     justifyContent: 'center',
   },
   songIndexText: {
-    color: '#007AFF',
+    color: '#133053',
     fontWeight: '700',
   },
   songMetaRow: {
@@ -415,14 +418,14 @@ const styles = StyleSheet.create({
   metaChip: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(0,122,255,0.08)',
+    backgroundColor: 'rgba(19,48,83,0.08)',
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: 12,
     gap: 6,
   },
   metaChipText: {
-    color: '#123053',
+    color: '#133053',
     fontWeight: '600',
   },
 });

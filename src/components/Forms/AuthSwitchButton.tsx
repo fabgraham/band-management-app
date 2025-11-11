@@ -15,7 +15,7 @@ export const AuthSwitchButton = ({ text, onPress, width }: AuthSwitchButtonProps
         {
           width,
           borderColor: '#ffffff',
-          backgroundColor: '#123053',
+          backgroundColor: '#133053',
         },
       ]}
     >

@@ -108,7 +108,7 @@ export const SignUpScreen = ({ navigation }: SignUpScreenProps) => {
             disabled={!isValid || !acceptedTerms || loading}
             style={styles.actionButton}
             textStyle={styles.actionText}
-            backgroundColor="#123053"
+            backgroundColor="#133053"
           />
         </AuthCard>
         <AuthSwitchButton
@@ -124,7 +124,7 @@ export const SignUpScreen = ({ navigation }: SignUpScreenProps) => {
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: '#123053',
+    backgroundColor: '#133053',
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -170,8 +170,8 @@ const styles = StyleSheet.create({
     marginRight: 12,
   },
   checkboxActive: {
-    backgroundColor: '#007AFF',
-    borderColor: '#007AFF',
+    backgroundColor: '#133053',
+    borderColor: '#133053',
   },
   checkboxDot: {
     width: 10,
