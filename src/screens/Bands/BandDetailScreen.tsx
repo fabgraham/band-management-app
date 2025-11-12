@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useFocusEffect } from '@react-navigation/native';
 import {
   Alert,
   Pressable,
@@ -112,6 +113,15 @@ export const BandDetailScreen = ({ route, navigation }: Props) => {
       loadSetlists();
     }
   }, [activeTab, loadSetlists]);
+
+  // Refresh setlists when screen gains focus
+  useFocusEffect(
+    useCallback(() => {
+      if (activeTab === 'setlists') {
+        loadSetlists(false);
+      }
+    }, [activeTab, loadSetlists])
+  );
 
   // Debounced search
   useEffect(() => {

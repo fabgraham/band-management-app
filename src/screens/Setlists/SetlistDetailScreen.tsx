@@ -26,6 +26,7 @@ import { BandsStackParamList } from '../../navigation/bandsStack.types';
 // Removed in-card Add Songs button; using header + icon instead
 import { CreateSetlistModal } from '../../components/Modals/CreateSetlistModal';
 import { AddSetlistSongsModal } from '../../components/Modals/AddSetlistSongsModal';
+import { ConfirmModal } from '../../components/Modals/ConfirmModal';
 import { showConfirm } from '../../utils/helpers/confirm';
 
 type NavigationProp = NativeStackNavigationProp<BandsStackParamList, 'SetlistDetail'>;
@@ -42,6 +43,9 @@ export const SetlistDetailScreen = () => {
   const [songs, setSongs] = useState<SetlistSongEntry[]>([]);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showAddSongsModal, setShowAddSongsModal] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deleteConfirmType, setDeleteConfirmType] = useState<'setlist' | 'song'>('setlist');
+  const [deleteConfirmData, setDeleteConfirmData] = useState<{ title: string; message: string; onConfirm: () => void } | null>(null);
 
   const loadSetlist = useCallback(async () => {
     try {
@@ -86,46 +90,46 @@ export const SetlistDetailScreen = () => {
   const handleDeleteSetlist = async () => {
     if (!setlist) return;
 
-    const confirmed = await showConfirm(
-      'Delete Setlist',
-      `Are you sure you want to delete "${setlist.name}"?`
-    );
-
-    if (!confirmed) {
-      return;
-    }
-
-    try {
-      await deleteSetlist(setlist.id);
-      navigation.goBack();
-    } catch (error) {
-      Alert.alert(
-        'Error',
-        error instanceof Error ? error.message : 'Failed to delete setlist.'
-      );
-    }
+    setDeleteConfirmType('setlist');
+    setDeleteConfirmData({
+      title: 'Delete Setlist',
+      message: `Are you sure you want to delete "${setlist.name}"?`,
+      onConfirm: async () => {
+        try {
+          await deleteSetlist(setlist.id);
+          setShowDeleteConfirm(false);
+          navigation.goBack();
+        } catch (error) {
+          Alert.alert(
+            'Error',
+            error instanceof Error ? error.message : 'Failed to delete setlist.'
+          );
+        }
+      }
+    });
+    setShowDeleteConfirm(true);
   };
 
   // Remove Song Handler
   const handleRemoveSong = async (entryId: string, songTitle: string) => {
-    const confirmed = await showConfirm(
-      'Remove Song',
-      `Are you sure you want to remove "${songTitle}" from this setlist?`
-    );
-
-    if (!confirmed) {
-      return;
-    }
-
-    try {
-      await removeSongFromSetlist(entryId);
-      await loadSetlist();
-    } catch (error) {
-      Alert.alert(
-        'Error',
-        error instanceof Error ? error.message : 'Failed to remove song.'
-      );
-    }
+    setDeleteConfirmType('song');
+    setDeleteConfirmData({
+      title: 'Remove Song',
+      message: `Are you sure you want to remove "${songTitle}" from this setlist?`,
+      onConfirm: async () => {
+        try {
+          await removeSongFromSetlist(entryId);
+          setShowDeleteConfirm(false);
+          await loadSetlist();
+        } catch (error) {
+          Alert.alert(
+            'Error',
+            error instanceof Error ? error.message : 'Failed to remove song.'
+          );
+        }
+      }
+    });
+    setShowDeleteConfirm(true);
   };
 
   const handleDragEnd = async ({ data }: { data: SetlistSongEntry[] }) => {
@@ -164,16 +168,16 @@ export const SetlistDetailScreen = () => {
           </View>
           <View>
             <Text style={styles.songTitle} numberOfLines={1}>
-              {item.song.title}
+              {item.song?.title || 'Unknown Song'}
             </Text>
             <Text style={styles.songMeta} numberOfLines={1}>
-              {item.song.artist}
+              {item.song?.artist || 'Unknown Artist'}
             </Text>
           </View>
         </View>
         <Pressable
           style={styles.songDeleteButton}
-          onPress={() => handleRemoveSong(item.id, item.song.title)}
+          onPress={() => handleRemoveSong(item.id, item.song?.title || 'Unknown Song')}
           hitSlop={8}
         >
           <Ionicons name="trash-outline" size={20} color="#ff3b30" />
@@ -242,10 +246,13 @@ export const SetlistDetailScreen = () => {
       <View style={styles.content}>
         {songs.length === 0 ? (
           <View style={styles.emptyStateContainer}>
-            <Text style={[styles.emptyStateTitle, { color: theme.colors.text }]}>
-              No songs yet in this setlist
+            <View style={styles.emptyStateIconContainer}>
+              <Ionicons name="musical-notes" size={48} color="#999" />
+            </View>
+            <Text style={[theme.typography.title2, { color: '#999', marginTop: 16 }]}>
+              No songs yet
             </Text>
-            <Text style={styles.emptyStateBody}>
+            <Text style={[theme.typography.body, { color: '#6e6e73', marginTop: 8, textAlign: 'center' }]}>
               Tap the + icon above to add songs.
             </Text>
           </View>
@@ -283,8 +290,18 @@ export const SetlistDetailScreen = () => {
           await loadSetlist();
         }}
       />
-    </View>
-  );
+
+     <ConfirmModal
+       visible={showDeleteConfirm}
+       title={deleteConfirmData?.title || ''}
+       message={deleteConfirmData?.message || ''}
+       confirmText={deleteConfirmType === 'setlist' ? 'Delete' : 'Remove'}
+       destructive={true}
+       onConfirm={() => deleteConfirmData?.onConfirm?.()}
+       onCancel={() => setShowDeleteConfirm(false)}
+     />
+   </View>
+ );
 };
 
 const styles = StyleSheet.create({
@@ -382,14 +399,20 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  emptyStateIconContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 8,
+  },
   emptyStateTitle: {
     fontSize: 20,
     fontWeight: '600',
+    color: '#999',
   },
   emptyStateBody: {
     fontSize: 15,
-    color: '#6e6e73',
-    marginTop: 4,
+    color: '#999',
+    marginTop: 8,
     textAlign: 'center',
   },
 });

@@ -206,6 +206,7 @@ const styles = StyleSheet.create({
     color: '#1c1c1e',
     fontWeight: '700',
     letterSpacing: 1,
+    fontSize: 22,
   },
   cardContent: {
     padding: 16,
