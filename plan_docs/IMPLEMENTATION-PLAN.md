@@ -315,6 +315,139 @@ This implementation plan follows a **feature-by-feature approach**, where each p
 
 ---
 
+## 🔄 Phase 3: Work in Progress (November 12, 2025)
+
+### Current Status
+**Phase 3 is PARTIALLY COMPLETE** - Core functionality exists but UX improvements and bug fixes needed.
+
+### ✅ Completed Today (Nov 12, 2025)
+1. **Setlist Detail Screen UI Redesign**
+   - Removed card-based song layout
+   - Added clean list design with 1px dividers
+   - Added hamburger icons (≡) for visual drag affordance
+   - Added subtle song numbering (gray, 12px)
+   - Implemented Edit Mode toggle (pencil/checkmark icons)
+   - Delete buttons now only appear in edit mode
+   - Files modified: `src/screens/Setlists/SetlistDetailScreen.tsx`
+
+2. **Fixed Setlist Card Actions (BandDetailScreen)**
+   - Added `e.stopPropagation()` to edit/delete buttons on setlist cards
+   - Fixed modal flash issue when editing setlist
+   - Files modified: `src/screens/Bands/BandDetailScreen.tsx`
+
+3. **UX Decision: Edit/Delete Separation**
+   - **Setlist metadata editing** (name/date) → Handled in modal from setlist cards
+   - **Song management** (remove songs) → Handled in SetlistDetailScreen with edit mode
+   - No confusion between editing setlist vs editing songs
+
+### ⚠️ BLOCKING ISSUES - Not Working (Nov 12, 2025)
+
+**CRITICAL**: Most functionality is broken and needs troubleshooting tomorrow:
+
+1. **❌ Song Reordering Not Working**
+   - **Expected**: Long-press on song row → drag to reorder
+   - **Actual**: Nothing happens when long-pressing
+   - **Attempted Fixes**:
+     - Tried `onPressIn={drag}` on hamburger icon → broke drag entirely
+     - Tried nested Pressable with separate drag handler → no response
+     - Current: Using outer Pressable with `onLongPress={drag}` (still not working)
+   - **Files**: `src/screens/Setlists/SetlistDetailScreen.tsx` lines 158-201
+   - **Library**: `react-native-draggable-flatlist`
+   - **Notes**:
+     - Haptic feedback triggers on drag begin
+     - `handleDragEnd` exists and calls `reorderSetlistSongs()`
+     - Visual hamburger icon is present but non-functional
+   - **Next Steps**:
+     - Check if DraggableFlatList is receiving correct props
+     - Test with simpler row structure
+     - Consider if nested Views are blocking touch events
+     - Review library documentation for web compatibility
+
+2. **❌ Add Songs Button Not Working**
+   - **Expected**: Tap [+] in header → Opens AddSetlistSongsModal
+   - **Actual**: Nothing happens
+   - **Files**: `src/screens/Setlists/SetlistDetailScreen.tsx` line 223-227
+   - **Modal**: `AddSetlistSongsModal` (should be functional - worked before)
+   - **Next Steps**:
+     - Check if modal state is updating
+     - Add console logs to `onPress` handler
+     - Verify modal is rendering (might be invisible)
+
+3. **❌ Delete Setlist Button Not Working**
+   - **Expected**: Tap trash icon in header → Show ConfirmModal → Delete on confirm
+   - **Actual**: Nothing happens
+   - **Files**: `src/screens/Setlists/SetlistDetailScreen.tsx` lines 89-111, 240-246
+   - **Handler**: `handleDeleteSetlist` calls `setShowDeleteConfirm(true)`
+   - **Modal**: `ConfirmModal` at lines 294-302
+   - **Notes**: Delete from setlist cards on BandDetailScreen DOES work (uses Alert.alert)
+   - **Next Steps**:
+     - Check if ConfirmModal visibility state is updating
+     - Verify modal is receiving correct props
+     - Consider switching to Alert.alert like BandDetailScreen
+
+4. **❌ Delete Song Button Not Working (in Edit Mode)**
+   - **Expected**: Tap Edit → Trash icons appear → Tap trash → ConfirmModal → Delete
+   - **Actual**: Edit mode works (icons appear), but tapping trash does nothing
+   - **Files**: `src/screens/Setlists/SetlistDetailScreen.tsx` lines 113-133, 186-196
+   - **Handler**: `handleRemoveSong` with `e.stopPropagation()`
+   - **Same issue** as delete setlist (ConfirmModal not showing)
+   - **Next Steps**: Same as #3 - investigate ConfirmModal
+
+### ✅ What IS Working
+- **Edit mode toggle**: Pencil icon → Edit mode → Checkmark icon → Done (works perfectly)
+- **Navigation**: Back button works
+- **Empty state**: Shows correctly when no songs
+- **Setlist data loading**: Songs display with correct info (title, artist, key, duration)
+- **Song numbering**: Shows correct order_index
+- **Visual design**: Dividers, spacing, colors all correct
+
+### 🔍 Root Cause Analysis Needed
+
+**Hypothesis**: Event handling and modal state management broken
+
+**Possible Causes**:
+1. **Pressable conflicts**: Multiple Pressables might be interfering with each other
+2. **Modal state not updating**: `setShowDeleteConfirm()` or `setShowAddSongsModal()` not triggering re-render
+3. **Event propagation**: Even with `stopPropagation()`, events might be blocked
+4. **React Native Web quirks**: Behavior differs between native and web (testing on web localhost:8081)
+5. **DraggableFlatList interference**: Library might be capturing all touch events
+
+**Debug Steps for Tomorrow**:
+1. Add `console.log()` to ALL button onPress handlers
+2. Add `console.log()` to ALL modal visibility state changes
+3. Test on actual device (iOS/Android) instead of web
+4. Simplify song row to minimal structure (no dividers, no hamburger)
+5. Test drag-and-drop with original card-based design
+6. Consider reverting to previous working version and re-applying changes incrementally
+
+### 📁 Files Modified Today
+1. `src/screens/Setlists/SetlistDetailScreen.tsx` - Major UI redesign
+2. `src/screens/Bands/BandDetailScreen.tsx` - Fixed stopPropagation on setlist cards
+3. `plan_docs/CHANGES_2025-11-12.md` - Created summary document
+
+### 🎯 Tomorrow's Priority Tasks
+1. **DEBUG**: Add console logging to identify which handlers aren't firing
+2. **FIX**: Song reordering (highest priority - core UX feature)
+3. **FIX**: Delete buttons and ConfirmModal
+4. **FIX**: Add songs button
+5. **TEST**: Verify all fixes on web AND native device
+6. **CONSIDER**: Reverting UI changes if event handling can't be fixed
+
+### 💡 Alternative Approaches to Consider
+1. **Reordering**: Use library's provided drag handle component instead of custom implementation
+2. **Modals**: Switch all ConfirmModals to Alert.alert (known to work)
+3. **UI**: Revert to card-based design if list design causes touch event issues
+4. **Library**: Check for DraggableFlatList web compatibility issues
+
+### 📝 Notes for Tomorrow
+- Original implementation (before today's changes) had working delete buttons using Alert.alert
+- Today's ConfirmModal approach is not working - may need to revert to Alert.alert
+- Drag-and-drop worked in previous sessions - today's changes broke it
+- Testing exclusively on web - need to test on actual devices to isolate web-specific issues
+- Consider creating minimal reproduction case for DraggableFlatList issue
+
+---
+
 ## Phase 4: Offline Sync 📡
 **Duration**: 7-10 days
 **Priority**: P0 - Critical infrastructure

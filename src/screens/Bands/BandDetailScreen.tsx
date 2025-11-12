@@ -507,13 +507,19 @@ export const BandDetailScreen = ({ route, navigation }: Props) => {
                           <View style={styles.setlistActions}>
                             <Pressable
                               style={styles.setlistActionButton}
-                              onPress={() => handleEditSetlist(item)}
+                              onPress={(e) => {
+                                e.stopPropagation();
+                                handleEditSetlist(item);
+                              }}
                             >
                               <Ionicons name="create-outline" size={20} color="#123053" />
                             </Pressable>
                             <Pressable
                               style={styles.setlistActionButton}
-                              onPress={() => handleDeleteSetlist(item)}
+                              onPress={(e) => {
+                                e.stopPropagation();
+                                handleDeleteSetlist(item);
+                              }}
                             >
                               <Ionicons name="trash-outline" size={20} color="#ff3b30" />
                             </Pressable>
@@ -731,9 +737,9 @@ export const BandDetailScreen = ({ route, navigation }: Props) => {
         bandId={band.id}
         setlist={setlistEditing ?? undefined}
         onSuccess={async () => {
+          await loadSetlists();
           setShowCreateSetlistModal(false);
           setSetlistEditing(null);
-          await loadSetlists();
         }}
       />
     </View>

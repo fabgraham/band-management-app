@@ -24,7 +24,6 @@ import {
 import { SetlistDetail, SetlistSongEntry } from '../../types';
 import { BandsStackParamList } from '../../navigation/bandsStack.types';
 // Removed in-card Add Songs button; using header + icon instead
-import { CreateSetlistModal } from '../../components/Modals/CreateSetlistModal';
 import { AddSetlistSongsModal } from '../../components/Modals/AddSetlistSongsModal';
 import { ConfirmModal } from '../../components/Modals/ConfirmModal';
 import { showConfirm } from '../../utils/helpers/confirm';
@@ -41,11 +40,11 @@ export const SetlistDetailScreen = () => {
   const [setlist, setSetlist] = useState<SetlistDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [songs, setSongs] = useState<SetlistSongEntry[]>([]);
-  const [showEditModal, setShowEditModal] = useState(false);
   const [showAddSongsModal, setShowAddSongsModal] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleteConfirmType, setDeleteConfirmType] = useState<'setlist' | 'song'>('setlist');
   const [deleteConfirmData, setDeleteConfirmData] = useState<{ title: string; message: string; onConfirm: () => void } | null>(null);
+  const [isEditMode, setIsEditMode] = useState(false);
 
   const loadSetlist = useCallback(async () => {
     try {
@@ -156,40 +155,49 @@ export const SetlistDetailScreen = () => {
   };
 
   const renderItem = ({ item, drag, isActive }: RenderItemParams<SetlistSongEntry>) => (
-    <Pressable
-      onLongPress={drag}
-      disabled={isActive}
-      style={[styles.songCard, isActive && { opacity: 0.9 }]}
-    >
-      <View style={styles.songHeader}>
-        <View style={styles.songTitleWrapper}>
-          <View style={styles.songIndexBadge}>
-            <Text style={styles.songIndexText}>{item.order_index}</Text>
-          </View>
-          <View>
+    <View>
+      <Pressable
+        onLongPress={drag}
+        disabled={isActive}
+        style={[styles.songRow, isActive && { opacity: 0.9, backgroundColor: '#f5f5f5' }]}
+      >
+        {/* Hamburger icon - always visible for drag */}
+        <View style={styles.dragHandle}>
+          <Ionicons name="reorder-three-outline" size={24} color="#6e6e73" />
+        </View>
+
+        {/* Song info */}
+        <View style={styles.songInfo}>
+          <View style={styles.songTitleRow}>
+            <Text style={styles.songNumber}>{item.order_index}.</Text>
             <Text style={styles.songTitle} numberOfLines={1}>
               {item.song?.title || 'Unknown Song'}
             </Text>
-            <Text style={styles.songMeta} numberOfLines={1}>
-              {item.song?.artist || 'Unknown Artist'}
-            </Text>
           </View>
+          <Text style={styles.songMeta} numberOfLines={1}>
+            {item.song?.artist || 'Unknown Artist'}
+            {item.song?.key && ` · ${item.song.key}`}
+            {item.song?.duration_seconds && ` · ${Math.floor(item.song.duration_seconds / 60)}:${(item.song.duration_seconds % 60).toString().padStart(2, '0')}`}
+          </Text>
         </View>
-        <Pressable
-          style={styles.songDeleteButton}
-          onPress={() => handleRemoveSong(item.id, item.song?.title || 'Unknown Song')}
-          hitSlop={8}
-        >
-          <Ionicons name="trash-outline" size={20} color="#ff3b30" />
-        </Pressable>
-      </View>
-      {/* optional meta row if you were using it before */}
-      {/* <View style={styles.songMetaRow}>
-        <View style={styles.metaChip}>
-          <Text style={styles.metaChipText}>Key: {item.song.key}</Text>
-        </View>
-      </View> */}
-    </Pressable>
+
+        {/* Delete button - only visible in edit mode */}
+        {isEditMode && (
+          <Pressable
+            style={styles.songDeleteButton}
+            onPress={(e) => {
+              e.stopPropagation();
+              handleRemoveSong(item.id, item.song?.title || 'Unknown Song');
+            }}
+            hitSlop={8}
+          >
+            <Ionicons name="trash-outline" size={20} color="#ff3b30" />
+          </Pressable>
+        )}
+      </Pressable>
+      {/* Divider line */}
+      <View style={styles.divider} />
+    </View>
   );
 
   if (loading) {
@@ -228,10 +236,14 @@ export const SetlistDetailScreen = () => {
           </Pressable>
           <Pressable
             style={styles.headerButton}
-            onPress={() => setShowEditModal(true)}
+            onPress={() => setIsEditMode(!isEditMode)}
             hitSlop={8}
           >
-            <Ionicons name="create-outline" size={22} color="#ffffff" />
+            {isEditMode ? (
+              <Ionicons name="checkmark" size={22} color="#ffffff" />
+            ) : (
+              <Ionicons name="create-outline" size={22} color="#ffffff" />
+            )}
           </Pressable>
           <Pressable
             style={styles.headerButton}
@@ -252,7 +264,7 @@ export const SetlistDetailScreen = () => {
             <Text style={[theme.typography.title2, { color: '#999', marginTop: 16 }]}>
               No songs yet
             </Text>
-            <Text style={[theme.typography.body, { color: '#6e6e73', marginTop: 8, textAlign: 'center' }]}>
+            <Text style={[theme.typography.body, { color: '#6e6e73', marginTop: 8, textAlign: 'center', paddingHorizontal: 20 }]}>
               Tap the + icon above to add songs.
             </Text>
           </View>
@@ -267,17 +279,6 @@ export const SetlistDetailScreen = () => {
           />
         )}
       </View>
-
-      <CreateSetlistModal
-        visible={showEditModal}
-        onClose={() => setShowEditModal(false)}
-        bandId={setlist.band_id}
-        setlist={setlist}
-        onSuccess={async () => {
-          setShowEditModal(false);
-          await loadSetlist();
-        }}
-      />
 
       <AddSetlistSongsModal
         visible={showAddSongsModal}
@@ -342,56 +343,55 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
-    padding: 20,
+    paddingHorizontal: 0,
+    paddingTop: 0,
   },
   listContent: {
     paddingBottom: 16,
   },
-  // Song rows: same clean, card-like feel as InfoCard
-  songCard: {
+  // New song row design with dividers
+  songRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
     backgroundColor: '#ffffff',
-    borderRadius: 16,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: '#e5e5ea',
-    marginBottom: 12,
   },
-  songHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+  dragHandle: {
+    paddingRight: 12,
   },
-  songTitleWrapper: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
+  songInfo: {
     flex: 1,
   },
-  songIndexBadge: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: 'rgba(19,48,83,0.12)',
-    alignItems: 'center',
-    justifyContent: 'center',
+  songTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    gap: 6,
   },
-  songIndexText: {
-    color: '#133053',
-    fontWeight: '700',
+  songNumber: {
+    fontSize: 12,
+    color: '#999',
+    fontWeight: '600',
   },
   songTitle: {
     fontSize: 16,
     fontWeight: '600',
     color: '#1c1c1e',
+    flex: 1,
   },
   songMeta: {
-    marginTop: 2,
+    marginTop: 4,
     fontSize: 13,
     color: '#6e6e73',
   },
   songDeleteButton: {
-    paddingHorizontal: 4,
+    paddingHorizontal: 8,
     paddingVertical: 4,
+  },
+  divider: {
+    height: 1,
+    backgroundColor: '#e5e5ea',
+    marginLeft: 52, // Align with song title (hamburger + padding)
   },
   // Empty state visually aligned with main SetlistsScreen empty state
   emptyStateContainer: {
