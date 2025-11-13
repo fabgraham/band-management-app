@@ -1640,12 +1640,12 @@ Phase 4 delivers the core value proposition of the app: a professional, distract
 - Complete integration with existing navigation and state management
 
 **2. Header with Controls**
-- **Exit Button (left):** Close icon returns to SetlistDetailScreen
+- **Exit Button (left):** Left arrow icon returns to SetlistDetailScreen, reinforcing the back-to-setlist flow
 - **Song Title (center):** Displays current song name, truncates with ellipsis if too long
 - **Font Size Controls:** Minus/plus circle icons adjust text size (14px - 32px range)
   - Buttons disable at min/max limits for clear UX feedback
   - Font size persists using AsyncStorage (`@performance_font_size`)
-- **Three-Dot Menu (right):** Opens song settings menu
+- **Three-Dot Button (right):** Opens `AddSongModal` in edit mode immediately, avoiding an intermediate menu
 - Header uses consistent blue (#133053) matching app-wide design
 
 **3. Song Information Display**
@@ -1682,9 +1682,9 @@ Phase 4 delivers the core value proposition of the app: a professional, distract
 - Three main buttons in horizontal layout:
 
   **Previous Button (left):**
-  - Arrow-back icon with "Previous" label
-  - Navigates to previous song in setlist
-  - Disabled when at first song (opacity: 0.3, icon color: #666)
+  - Arrow-back icon only (no descriptive label) for a cleaner control row
+  - Navigates to the previous song in the setlist
+  - Disabled when at the first song (opacity: 0.3, icon color: #666)
 
   **Play/Pause Button (center):**
   - Large circular button (64px diameter)
@@ -1694,9 +1694,9 @@ Phase 4 delivers the core value proposition of the app: a professional, distract
   - Drop shadow for visual prominence
 
   **Next Button (right):**
-  - Arrow-forward icon with "Next" label
-  - Navigates to next song in setlist
-  - Disabled when at last song (opacity: 0.3, icon color: #666)
+  - Arrow-forward icon only (no descriptive label) to mirror the previous control
+  - Navigates to the next song in the setlist
+  - Disabled when at the last song (opacity: 0.3, icon color: #666)
 
 - Background: Very dark (#0a0a0a) to minimize distraction
 - Border top (1px, #333) separates from content area
@@ -1711,19 +1711,17 @@ Phase 4 delivers the core value proposition of the app: a professional, distract
 - Maintains setlist context throughout performance session
 - Smooth transitions between songs
 
-**8. Song Settings Menu**
-- Three-dot menu icon in header opens `ActionMenuModal`
-- Menu items:
-  - "Edit Song" with create-outline icon
-  - Opens `AddSongModal` in edit mode
-- Reuses existing AddSongModal component for consistency
+**8. Song Editing Shortcut**
+- Three-dot button in the header opens `AddSongModal` in edit mode immediately (no intermediate menu)
+- Modal displays only the editable fields when updating a song; the header text is hidden to keep the focus on the form
+- Reuses the existing AddSongModal component for consistency and validation
 - User can edit all song details:
   - Title, Artist, Key, BPM, Duration
   - **Lyrics** (critical for performance corrections)
   - Notes
 - Changes save immediately via `updateSong()` service
 - Setlist reloads after save via `onSuccess` callback
-- Enables quick fixes during performance without leaving screen
+- Enables quick fixes during performance without leaving the screen
 
 **9. Font Size Persistence**
 - Uses AsyncStorage key: `@performance_font_size`
@@ -1746,7 +1744,7 @@ Phase 4 delivers the core value proposition of the app: a professional, distract
 - `src/screens/Performance/PerformanceModeScreen.tsx` (356 lines)
   - Complete self-contained performance mode implementation
   - All UI, state management, and business logic in one file
-  - Uses existing components (ActionMenuModal, AddSongModal)
+  - Uses existing `AddSongModal` for editing and configuration to keep UX consistent
   - Proper TypeScript types throughout
 
 ### Files Modified
@@ -1776,7 +1774,6 @@ const [currentIndex, setCurrentIndex] = useState(songIndex);
 const [loading, setLoading] = useState(true);
 const [fontSize, setFontSize] = useState(DEFAULT_FONT_SIZE);
 const [isPlaying, setIsPlaying] = useState(false);
-const [showSongMenu, setShowSongMenu] = useState(false);
 const [showEditSongModal, setShowEditSongModal] = useState(false);
 ```
 
@@ -1849,20 +1846,18 @@ const handleNext = () => {
    - Adjust font size with +/− buttons
    - Start auto-scroll with Play button
    - Navigate to previous/next songs with arrow buttons
-   - Edit song details (including lyrics) via three-dot menu
+   - Edit song details (including lyrics) via the three-dot edit shortcut that opens the form immediately
    - Manually scroll through lyrics
-   - Exit back to setlist with close button
+   - Exit back to setlist with the left arrow button in the header
 7. User performs entire setlist without leaving performance mode
 
 **Edit During Performance:**
-1. User taps three-dot menu in header
-2. ActionMenuModal opens with "Edit Song" option
-3. User taps "Edit Song"
-4. AddSongModal opens with all song fields pre-filled
-5. User edits lyrics or other details
-6. User saves changes
-7. Modal closes, performance view reloads with updated data
-8. User continues performing
+1. User taps the three-dot button in the header
+2. `AddSongModal` opens immediately in edit mode with all fields pre-filled and no title copy
+3. User edits lyrics or other song metadata
+4. User saves changes
+5. Modal closes, performance view reloads with updated data
+6. User continues performing
 
 ### Design Decisions
 
@@ -1910,8 +1905,8 @@ const handleNext = () => {
 - ✅ Previous/Next buttons disable at boundaries
 - ✅ Play button starts auto-scroll
 - ✅ Auto-scroll stops when navigating songs
-- ✅ Three-dot menu opens ActionMenuModal
-- ✅ Edit Song opens AddSongModal with correct data
+- ✅ Three-dot button opens AddSongModal in edit mode immediately
+- ✅ Edit Song modal shows pre-filled fields without an extra header
 - ✅ Editing song updates performance view
 - ✅ Empty lyrics state shows helpful message
 - ✅ TypeScript compilation succeeds
@@ -2041,13 +2036,12 @@ Core Features:
 - Auto-scroll based on song duration using Animated API (60fps)
 - Font size adjustment (14-32px) with AsyncStorage persistence
 - Previous/Next song navigation within setlist
-- Song editing accessible via three-dot menu
+- Three-dot button opens AddSongModal immediately for editing
 - Play/Pause controls with proper disabled states
 
 Components:
 - Created PerformanceModeScreen.tsx (356 lines)
-- Integrated ActionMenuModal for song settings
-- Reused AddSongModal for in-performance editing
+- Reused AddSongModal for in-performance editing (no extra menu)
 
 Navigation:
 - Added PerformanceMode route to BandsStack

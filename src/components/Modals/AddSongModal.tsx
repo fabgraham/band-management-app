@@ -208,14 +208,16 @@ export const AddSongModal = ({
       <View style={styles.overlayCentered}>
         <Pressable style={styles.backdrop} onPress={handleClose} />
         <View style={[styles.modalCard, { backgroundColor: '#ffffff' }]}>
-          <View style={styles.header}>
-            <Text style={[theme.typography.title1, { color: '#1c1c1e', textAlign: 'center' }]}>
-              {isEditMode ? 'Edit Song' : 'Add Song'}
-            </Text>
-            <Text style={[theme.typography.body, { color: '#6b6b71', marginTop: 4, textAlign: 'center' }]}>
-              {isEditMode ? `Update "${song?.title}"` : `Add a new song to ${activeBand?.name}`}
-            </Text>
-          </View>
+          {!isEditMode && (
+            <View style={styles.header}>
+              <Text style={[theme.typography.title1, { color: '#1c1c1e', textAlign: 'center' }]}>
+                Add Song
+              </Text>
+              <Text style={[theme.typography.body, { color: '#6b6b71', marginTop: 4, textAlign: 'center' }]}>
+                {`Add a new song to ${activeBand?.name}`}
+              </Text>
+            </View>
+          )}
 
           <ScrollView style={styles.scrollView} contentContainerStyle={{ paddingBottom: 8 }} showsVerticalScrollIndicator={false}>
             {/* Artist */}

@@ -15,8 +15,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { BandsStackParamList } from '../../navigation/bandsStack.types';
 import { getSetlistWithSongs } from '../../services/data/setlistService';
-import { SetlistDetail, Song } from '../../types';
-import { ActionMenuModal } from '../../components/Modals/ActionMenuModal';
+import { SetlistDetail } from '../../types';
 import { AddSongModal } from '../../components/Modals/AddSongModal';
 
 type NavigationProp = NativeStackNavigationProp<BandsStackParamList, 'PerformanceMode'>;
@@ -37,7 +36,6 @@ export const PerformanceModeScreen = () => {
   const [loading, setLoading] = useState(true);
   const [fontSize, setFontSize] = useState(DEFAULT_FONT_SIZE);
   const [isPlaying, setIsPlaying] = useState(false);
-  const [showSongMenu, setShowSongMenu] = useState(false);
   const [showEditSongModal, setShowEditSongModal] = useState(false);
 
   const scrollViewRef = useRef<ScrollView>(null);
@@ -193,7 +191,7 @@ export const PerformanceModeScreen = () => {
           }}
           hitSlop={8}
         >
-          <Ionicons name="close" size={24} color="#ffffff" />
+          <Ionicons name="arrow-back" size={24} color="#ffffff" />
         </Pressable>
         <Text style={styles.songTitle} numberOfLines={1}>
           {currentSong.title}
@@ -225,7 +223,7 @@ export const PerformanceModeScreen = () => {
           </Pressable>
           <Pressable
             style={styles.headerButton}
-            onPress={() => setShowSongMenu(true)}
+            onPress={() => setShowEditSongModal(true)}
             hitSlop={8}
           >
             <Ionicons name="ellipsis-horizontal-circle-outline" size={24} color="#ffffff" />
@@ -272,21 +270,18 @@ export const PerformanceModeScreen = () => {
 
       {/* Bottom Navigation */}
       <View style={styles.bottomNav}>
-        <Pressable
-          style={[styles.navButton, currentIndex === 0 && styles.navButtonDisabled]}
-          onPress={handlePrevious}
-          disabled={currentIndex === 0}
-          hitSlop={8}
-        >
-          <Ionicons
-            name="arrow-back"
-            size={24}
-            color={currentIndex === 0 ? '#666' : '#ffffff'}
-          />
-          <Text style={[styles.navButtonText, currentIndex === 0 && styles.navButtonTextDisabled]}>
-            Previous
-          </Text>
-        </Pressable>
+          <Pressable
+            style={[styles.navButton, currentIndex === 0 && styles.navButtonDisabled]}
+            onPress={handlePrevious}
+            disabled={currentIndex === 0}
+            hitSlop={8}
+          >
+            <Ionicons
+              name="arrow-back"
+              size={24}
+              color={currentIndex === 0 ? '#666' : '#ffffff'}
+            />
+          </Pressable>
 
         <Pressable
           style={styles.playButton}
@@ -301,45 +296,22 @@ export const PerformanceModeScreen = () => {
           />
         </Pressable>
 
-        <Pressable
-          style={[
-            styles.navButton,
-            currentIndex === setlist.songs.length - 1 && styles.navButtonDisabled,
-          ]}
-          onPress={handleNext}
-          disabled={currentIndex === setlist.songs.length - 1}
-          hitSlop={8}
-        >
-          <Ionicons
-            name="arrow-forward"
-            size={24}
-            color={currentIndex === setlist.songs.length - 1 ? '#666' : '#ffffff'}
-          />
-          <Text
+          <Pressable
             style={[
-              styles.navButtonText,
-              currentIndex === setlist.songs.length - 1 && styles.navButtonTextDisabled,
+              styles.navButton,
+              currentIndex === setlist.songs.length - 1 && styles.navButtonDisabled,
             ]}
+            onPress={handleNext}
+            disabled={currentIndex === setlist.songs.length - 1}
+            hitSlop={8}
           >
-            Next
-          </Text>
-        </Pressable>
+            <Ionicons
+              name="arrow-forward"
+              size={24}
+              color={currentIndex === setlist.songs.length - 1 ? '#666' : '#ffffff'}
+            />
+          </Pressable>
       </View>
-
-      {/* Song Settings Menu */}
-      <ActionMenuModal
-        visible={showSongMenu}
-        onClose={() => setShowSongMenu(false)}
-        items={[
-          {
-            label: 'Edit Song',
-            icon: 'create-outline',
-            onPress: () => {
-              setShowEditSongModal(true);
-            },
-          },
-        ]}
-      />
 
       {/* Edit Song Modal */}
       <AddSongModal
@@ -460,22 +432,12 @@ const styles = StyleSheet.create({
     borderTopColor: '#333',
   },
   navButton: {
-    flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
     paddingVertical: 8,
     paddingHorizontal: 12,
   },
   navButtonDisabled: {
     opacity: 0.3,
-  },
-  navButtonText: {
-    fontSize: 14,
-    color: '#ffffff',
-    fontWeight: '500',
-  },
-  navButtonTextDisabled: {
-    color: '#666',
   },
   playButton: {
     width: 64,
