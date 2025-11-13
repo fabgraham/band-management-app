@@ -3,5 +3,6 @@ export type BandsStackParamList = {
   BandDetail: { bandId: string };
   SongDetail: { songId: string };
   SetlistDetail: { setlistId: string };
+  PerformanceMode: { setlistId: string; songIndex: number };
   Profile: undefined;
 };

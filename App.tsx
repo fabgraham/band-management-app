@@ -14,6 +14,7 @@ import { BandDetailScreen } from './src/screens/Bands/BandDetailScreen';
 import { ProfileScreen } from './src/screens/Profile/ProfileScreen';
 import { SongDetailScreen } from './src/screens/Library/SongDetailScreen';
 import { SetlistDetailScreen } from './src/screens/Setlists/SetlistDetailScreen';
+import { PerformanceModeScreen } from './src/screens/Performance/PerformanceModeScreen';
 import { AuthStackParamList } from './src/navigation/authStack.types';
 import { BandsStackParamList } from './src/navigation/bandsStack.types';
 
@@ -48,6 +49,7 @@ const BandsStackNavigator = () => (
     <BandsStack.Screen name="BandDetail" component={BandDetailScreen} options={{ headerShown: false }} />
     <BandsStack.Screen name="SongDetail" component={SongDetailScreen} options={{ headerShown: false }} />
     <BandsStack.Screen name="SetlistDetail" component={SetlistDetailScreen} options={{ headerShown: false }} />
+    <BandsStack.Screen name="PerformanceMode" component={PerformanceModeScreen} options={{ headerShown: false }} />
     <BandsStack.Screen
       name="Profile"
       component={ProfileScreen}

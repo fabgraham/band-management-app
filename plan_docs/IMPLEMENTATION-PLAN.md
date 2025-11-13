@@ -315,12 +315,12 @@ This implementation plan follows a **feature-by-feature approach**, where each p
 
 ---
 
-## 🔄 Phase 3: Work in Progress (November 12, 2025)
+## ✅ Phase 3: Setlist Management - COMPLETE (November 13, 2025)
 
 ### Current Status
-**Phase 3 is PARTIALLY COMPLETE** - Core functionality exists but UX improvements and bug fixes needed.
+**Phase 3 is COMPLETE** - All core functionality working, UX polished.
 
-### ✅ Completed Today (Nov 12, 2025)
+### ✅ Completed November 12-13, 2025
 1. **Setlist Detail Screen UI Redesign**
    - Removed card-based song layout
    - Added clean list design with 1px dividers
@@ -340,115 +340,320 @@ This implementation plan follows a **feature-by-feature approach**, where each p
    - **Song management** (remove songs) → Handled in SetlistDetailScreen with edit mode
    - No confusion between editing setlist vs editing songs
 
-### ⚠️ BLOCKING ISSUES - Not Working (Nov 12, 2025)
+### ✅ All Issues Resolved (November 13, 2025)
 
-**CRITICAL**: Most functionality is broken and needs troubleshooting tomorrow:
+**FIXES COMPLETED**:
 
-1. **❌ Song Reordering Not Working**
-   - **Expected**: Long-press on song row → drag to reorder
-   - **Actual**: Nothing happens when long-pressing
-   - **Attempted Fixes**:
-     - Tried `onPressIn={drag}` on hamburger icon → broke drag entirely
-     - Tried nested Pressable with separate drag handler → no response
-     - Current: Using outer Pressable with `onLongPress={drag}` (still not working)
-   - **Files**: `src/screens/Setlists/SetlistDetailScreen.tsx` lines 158-201
-   - **Library**: `react-native-draggable-flatlist`
-   - **Notes**:
-     - Haptic feedback triggers on drag begin
-     - `handleDragEnd` exists and calls `reorderSetlistSongs()`
-     - Visual hamburger icon is present but non-functional
-   - **Next Steps**:
-     - Check if DraggableFlatList is receiving correct props
-     - Test with simpler row structure
-     - Consider if nested Views are blocking touch events
-     - Review library documentation for web compatibility
+1. **✅ Song Reordering - FIXED**
+   - **Solution**: Removed outer Pressable wrapper, moved `onLongPress={drag}` directly to hamburger icon
+   - **Result**: Long-press drag now works smoothly with proper haptic feedback
+   - **Files**: `src/screens/Setlists/SetlistDetailScreen.tsx`
 
-2. **❌ Add Songs Button Not Working**
-   - **Expected**: Tap [+] in header → Opens AddSetlistSongsModal
-   - **Actual**: Nothing happens
-   - **Files**: `src/screens/Setlists/SetlistDetailScreen.tsx` line 223-227
-   - **Modal**: `AddSetlistSongsModal` (should be functional - worked before)
-   - **Next Steps**:
-     - Check if modal state is updating
-     - Add console logs to `onPress` handler
-     - Verify modal is rendering (might be invisible)
+2. **✅ Delete Buttons - FIXED**
+   - **Solution**: Switched from Alert.alert to ConfirmModal for web compatibility
+   - **Enhancement**: Added `showCancelButton={false}` prop for streamlined UX
+   - **Result**: All delete confirmations work correctly on both web and native
+   - **Files**: `src/components/Modals/ConfirmModal.tsx`, `src/screens/Setlists/SetlistDetailScreen.tsx`
 
-3. **❌ Delete Setlist Button Not Working**
-   - **Expected**: Tap trash icon in header → Show ConfirmModal → Delete on confirm
-   - **Actual**: Nothing happens
-   - **Files**: `src/screens/Setlists/SetlistDetailScreen.tsx` lines 89-111, 240-246
-   - **Handler**: `handleDeleteSetlist` calls `setShowDeleteConfirm(true)`
-   - **Modal**: `ConfirmModal` at lines 294-302
-   - **Notes**: Delete from setlist cards on BandDetailScreen DOES work (uses Alert.alert)
-   - **Next Steps**:
-     - Check if ConfirmModal visibility state is updating
-     - Verify modal is receiving correct props
-     - Consider switching to Alert.alert like BandDetailScreen
+3. **✅ Three-Dot Menu - NEW FEATURE**
+   - **Added**: ActionMenuModal component for consistent menu pattern
+   - **Location**: SetlistDetailScreen header (replaces inline delete button)
+   - **Options**: "Edit Setlist" and "Delete Setlist" with destructive styling
+   - **Files**: `src/components/Modals/ActionMenuModal.tsx` (NEW)
 
-4. **❌ Delete Song Button Not Working (in Edit Mode)**
-   - **Expected**: Tap Edit → Trash icons appear → Tap trash → ConfirmModal → Delete
-   - **Actual**: Edit mode works (icons appear), but tapping trash does nothing
-   - **Files**: `src/screens/Setlists/SetlistDetailScreen.tsx` lines 113-133, 186-196
-   - **Handler**: `handleRemoveSong` with `e.stopPropagation()`
-   - **Same issue** as delete setlist (ConfirmModal not showing)
-   - **Next Steps**: Same as #3 - investigate ConfirmModal
+4. **✅ Edit Setlist Integration - COMPLETE**
+   - **Added**: CreateSetlistModal integration in SetlistDetailScreen
+   - **Access**: Opens from three-dot menu "Edit Setlist" option
+   - **Result**: In-place editing with automatic reload after save
+   - **Files**: `src/screens/Setlists/SetlistDetailScreen.tsx`
 
-### ✅ What IS Working
-- **Edit mode toggle**: Pencil icon → Edit mode → Checkmark icon → Done (works perfectly)
-- **Navigation**: Back button works
-- **Empty state**: Shows correctly when no songs
-- **Setlist data loading**: Songs display with correct info (title, artist, key, duration)
-- **Song numbering**: Shows correct order_index
-- **Visual design**: Dividers, spacing, colors all correct
+5. **✅ Setlist Card UX Improvements - COMPLETE**
+   - **Removed**: "No date set" text (field cannot be set)
+   - **Added**: 16px top padding to setlist scroll area
+   - **Improved**: Stats layout (flex:0, minWidth:30%) for tighter visual grouping
+   - **Reduced**: Gap between "Songs" and "Duration" from 24px to 16px
+   - **Files**: `src/screens/Bands/BandDetailScreen.tsx`
 
-### 🔍 Root Cause Analysis Needed
+### 📁 Files Modified/Created November 13
+1. `src/screens/Setlists/SetlistDetailScreen.tsx` - Fixed drag, added three-dot menu, integrated edit modal
+2. `src/screens/Bands/BandDetailScreen.tsx` - Improved setlist card styling
+3. `src/components/Modals/ActionMenuModal.tsx` - **NEW** reusable menu component
+4. `src/components/Modals/ConfirmModal.tsx` - Added optional cancel button
+5. `src/components/Modals/CreateSetlistModal.tsx` - Removed delete button (now in menu)
+6. `plan_docs/Implementation_Summary.md` - Documented all changes
 
-**Hypothesis**: Event handling and modal state management broken
-
-**Possible Causes**:
-1. **Pressable conflicts**: Multiple Pressables might be interfering with each other
-2. **Modal state not updating**: `setShowDeleteConfirm()` or `setShowAddSongsModal()` not triggering re-render
-3. **Event propagation**: Even with `stopPropagation()`, events might be blocked
-4. **React Native Web quirks**: Behavior differs between native and web (testing on web localhost:8081)
-5. **DraggableFlatList interference**: Library might be capturing all touch events
-
-**Debug Steps for Tomorrow**:
-1. Add `console.log()` to ALL button onPress handlers
-2. Add `console.log()` to ALL modal visibility state changes
-3. Test on actual device (iOS/Android) instead of web
-4. Simplify song row to minimal structure (no dividers, no hamburger)
-5. Test drag-and-drop with original card-based design
-6. Consider reverting to previous working version and re-applying changes incrementally
-
-### 📁 Files Modified Today
-1. `src/screens/Setlists/SetlistDetailScreen.tsx` - Major UI redesign
-2. `src/screens/Bands/BandDetailScreen.tsx` - Fixed stopPropagation on setlist cards
-3. `plan_docs/CHANGES_2025-11-12.md` - Created summary document
-
-### 🎯 Tomorrow's Priority Tasks
-1. **DEBUG**: Add console logging to identify which handlers aren't firing
-2. **FIX**: Song reordering (highest priority - core UX feature)
-3. **FIX**: Delete buttons and ConfirmModal
-4. **FIX**: Add songs button
-5. **TEST**: Verify all fixes on web AND native device
-6. **CONSIDER**: Reverting UI changes if event handling can't be fixed
-
-### 💡 Alternative Approaches to Consider
-1. **Reordering**: Use library's provided drag handle component instead of custom implementation
-2. **Modals**: Switch all ConfirmModals to Alert.alert (known to work)
-3. **UI**: Revert to card-based design if list design causes touch event issues
-4. **Library**: Check for DraggableFlatList web compatibility issues
-
-### 📝 Notes for Tomorrow
-- Original implementation (before today's changes) had working delete buttons using Alert.alert
-- Today's ConfirmModal approach is not working - may need to revert to Alert.alert
-- Drag-and-drop worked in previous sessions - today's changes broke it
-- Testing exclusively on web - need to test on actual devices to isolate web-specific issues
-- Consider creating minimal reproduction case for DraggableFlatList issue
+### 🎨 UI/UX Improvements Summary
+- Cleaner setlist cards without button clutter
+- Consistent three-dot menu pattern for actions
+- Better spacing and visual hierarchy
+- Streamlined delete confirmation flow (no cancel button)
+- Web-compatible modals throughout
+- Tighter stats layout on setlist cards
 
 ---
 
-## Phase 4: Offline Sync 📡
+## 🎯 Phase 4: Lyrics Display & Performance Mode (NEXT - December 2025)
+
+### Overview
+**Duration**: 3-5 days
+**Priority**: P0 - Core value proposition
+**Why Next?**: This is the main feature that makes the app useful for live performances
+
+### User Story
+> "As a performer, when I tap on a song in a setlist, I want to see the lyrics in a large, readable format with auto-scroll, so I can perform without looking away from the stage."
+
+### Current State
+- ✅ Songs have `lyrics` field (text, stored in database)
+- ✅ Lyrics are viewable in SongDetailScreen (small text, edit mode)
+- ❌ No performance/live view mode
+- ❌ No auto-scroll functionality
+- ❌ No large text display optimized for stage use
+
+### Requirements (from PRD 5.1.5)
+
+#### Must-Have (P0):
+1. **Full-Screen Lyrics Viewer**
+   - Access from: SetlistDetailScreen → Tap song row
+   - Hide: Header, navigation, all UI chrome
+   - Show: Only lyrics text and minimal controls
+   - Dark mode optimized for stage lighting
+
+2. **Text Size Adjustment**
+   - User-controlled font size slider (14px - 36px range)
+   - Preference saved per user (not per song)
+   - Large default size (24px) for stage visibility
+
+3. **Manual Scroll**
+   - User can scroll freely through lyrics
+   - Smooth scrolling with momentum
+   - Current position indicator (optional)
+
+4. **Auto-Scroll (Duration-Based)**
+   - Only enabled if song has `duration_seconds`
+   - Calculate scroll speed: `lyricHeight / durationSeconds`
+   - Play/Pause button at bottom (floating action button)
+   - Pause on manual scroll (auto-resume after 5 seconds of no touch)
+   - Smooth 60fps animation
+
+5. **Play/Pause Controls**
+   - Play: Start auto-scroll from current position
+   - Pause: Stop at current position
+   - Bottom navigation bar with three buttons:
+     - Previous song (left arrow icon)
+     - Play/Pause (center, primary button)
+     - Next song (right arrow icon)
+   - Navigation buttons allow moving through setlist without exiting performance mode
+
+6. **Song Settings Menu**
+   - Three-dot menu icon in header (right side, next to song name)
+   - Opens settings modal with all song details (same as AddSongModal)
+   - User can edit: title, artist, key, BPM, duration, lyrics, notes
+   - Changes save immediately and update performance view
+   - Uses existing AddSongModal component in edit mode
+
+#### Nice-to-Have (P1):
+7. **Scroll Speed Indicator**
+   - Show time remaining (e.g., "2:45 remaining")
+   - Show progress bar (0-100%)
+
+8. **Scroll Speed Adjustment**
+   - Slider to adjust speed (0.5x - 2x)
+   - Useful if song duration estimate is off
+
+### Implementation Tasks
+
+#### Backend (None - uses existing schema)
+- ✅ `songs.lyrics` column already exists
+- ✅ `songs.duration_seconds` column already exists
+- No database changes needed
+
+#### Frontend Tasks
+
+**1. Create PerformanceModeScreen**
+- File: `src/screens/Performance/PerformanceModeScreen.tsx`
+- Route: Add to BandsStack navigator
+- Navigation: From SetlistDetailScreen song tap
+- Props: `{ songId: string, setlistId?: string }`
+
+**2. Build Full-Screen Lyrics View**
+- Hide React Navigation header (`headerShown: false`)
+- Dark background (#000000 or #1a1a1a)
+- White text (#ffffff) with high contrast
+- Full-screen ScrollView with lyrics
+- Exit button (top-left corner, minimal)
+
+**3. Implement Font Size Control**
+- Add slider component (bottom sheet or overlay)
+- Range: 14px - 36px, default 24px
+- Save to AsyncStorage: `@lyrics_font_size`
+- Load on mount and apply to lyrics text
+
+**4. Add Manual Scroll**
+- Use `ScrollView` with `ref` for programmatic control
+- Track scroll position with `onScroll` event
+- Store current position in state
+- Disable auto-scroll on user touch
+
+**5. Implement Auto-Scroll**
+- Calculate scroll speed on mount:
+  ```typescript
+  const scrollSpeed = lyricHeight / song.duration_seconds;
+  ```
+- Use `Animated.timing()` for smooth scroll:
+  ```typescript
+  Animated.timing(scrollY, {
+    toValue: lyricHeight,
+    duration: song.duration_seconds * 1000,
+    easing: Easing.linear,
+    useNativeDriver: true,
+  }).start();
+  ```
+- Add pause/resume functionality
+- Pause on manual scroll, resume after 5s timeout
+
+**6. Build Bottom Navigation Bar**
+- Fixed bottom bar (always visible, doesn't auto-hide)
+- Three main buttons in horizontal layout:
+  - **Previous Song** (left): Arrow-left icon, navigates to previous song in setlist
+  - **Play/Pause** (center): Large primary button, toggles auto-scroll
+  - **Next Song** (right): Arrow-right icon, navigates to next song in setlist
+- Styling: Dark background to match performance mode
+- Button states:
+  - Disable Previous if first song in setlist
+  - Disable Next if last song in setlist
+  - Play/Pause always enabled if song has duration
+
+**7. Build Song Settings Menu**
+- Three-dot menu icon in header (top-right, next to song name)
+- Opens ActionMenuModal with options:
+  - "Edit Song Details" → Opens AddSongModal in edit mode
+  - Shows all song fields (title, artist, lyrics, key, BPM, duration, notes)
+  - On save: Update song, reload performance view
+  - Allow editing lyrics during performance (useful for corrections)
+
+**8. Implement Setlist Navigation**
+- Pass `setlistId` and `songIndex` as route params
+- Load full setlist data to enable prev/next navigation
+- Track current song index in state
+- On Previous/Next: Update index, load new song, reset scroll position
+- Maintain auto-scroll state across song changes (if playing, start next song automatically)
+
+**9. Add Scroll Progress Indicator (P1)**
+- Progress bar at top (2px height, subtle)
+- Time remaining label (top-right corner)
+- Format: MM:SS or "2:45 remaining"
+
+**10. Navigation Flow**
+- SetlistDetailScreen: Tap song row → Navigate to PerformanceModeScreen
+- Pass songId via route params
+- Load song data (title, artist, lyrics, duration)
+- Show loading state while fetching
+
+**11. Edge Cases & Error Handling**
+- No lyrics: Show message "No lyrics available for this song"
+- No duration: Disable auto-scroll, show manual scroll only
+- Very short songs (<30s): Warn that auto-scroll may be too fast
+- Very long songs (>10min): Consider chunked scrolling
+
+**12. Testing Checklist**
+- [ ] Lyrics display correctly with various text lengths
+- [ ] Font size adjustment persists across app restarts
+- [ ] Auto-scroll speed is accurate (test with known song)
+- [ ] Manual scroll doesn't break auto-scroll
+- [ ] Controls auto-hide and show on tap
+- [ ] Exit button returns to setlist
+- [ ] Works on small screens (iPhone SE) and large (iPad)
+- [ ] Dark mode is comfortable for stage lighting
+- [ ] 60fps scrolling (no jank or stuttering)
+
+### Expected Outcome
+- ✅ Users can view lyrics in full-screen performance mode
+- ✅ Auto-scroll works smoothly based on song duration
+- ✅ Font size is adjustable and readable from distance
+- ✅ Manual scroll and auto-scroll coexist without conflicts
+- ✅ Previous/Next buttons allow seamless navigation through setlist
+- ✅ Song settings accessible without exiting performance mode
+- ✅ Lyrics can be edited during performance for quick corrections
+- ✅ Bottom navigation always visible and easy to reach
+- ✅ Complete user flow: Tap song → See lyrics → Auto-scroll → Navigate setlist → Edit if needed → Perform
+
+### Files to Create/Modify
+**New Files:**
+- `src/screens/Performance/PerformanceModeScreen.tsx`
+- `src/components/Performance/LyricsViewer.tsx` (optional, for reusability)
+- `src/components/Performance/AutoScrollControls.tsx` (optional)
+
+**Modified Files:**
+- `src/navigation/bandsStack.types.ts` - Add PerformanceModeScreen route with params `{ setlistId: string, songIndex: number }`
+- `App.tsx` - Add PerformanceModeScreen to BandsStack
+- `src/screens/Setlists/SetlistDetailScreen.tsx` - Add navigation to performance mode (pass setlistId and songIndex)
+- `src/components/Modals/AddSongModal.tsx` - Reused for editing song details from performance mode
+
+### Success Metrics
+- **Primary**: Can perform entire setlist without exiting performance mode
+- **Secondary**: Auto-scroll speed accurate (no manual adjustment needed)
+- **Tertiary**: Font size readable from 2-3 meters away
+- **Quaternary**: Previous/Next navigation feels natural and responsive
+- **User feedback**: "This feature makes the app worth using"
+
+### UX Design Details
+
+**Bottom Navigation Bar Layout:**
+```
+┌─────────────────────────────────────────┐
+│                                         │
+│         [Performance View]              │
+│                                         │
+│                                         │
+└─────────────────────────────────────────┘
+┌─────────────────────────────────────────┐
+│  ◄    │      ▶ Play      │      ►      │
+│ Prev  │     (large)       │     Next    │
+└─────────────────────────────────────────┘
+```
+
+**Header Layout:**
+```
+┌─────────────────────────────────────────┐
+│  ✕      Song Title         ⋮           │
+│ Exit                      Menu          │
+└─────────────────────────────────────────┘
+```
+
+**Route Params:**
+```typescript
+type PerformanceModeParams = {
+  setlistId: string;
+  songIndex: number; // Current position in setlist (0-based)
+};
+```
+
+**State Management:**
+```typescript
+const [currentSongIndex, setCurrentSongIndex] = useState(songIndex);
+const [setlistSongs, setSetlistSongs] = useState<SetlistSongEntry[]>([]);
+const [isPlaying, setIsPlaying] = useState(false);
+const [showEditModal, setShowEditModal] = useState(false);
+
+// Navigation handlers
+const handlePrevious = () => {
+  if (currentSongIndex > 0) {
+    setCurrentSongIndex(currentSongIndex - 1);
+    // Reset scroll, load new song
+  }
+};
+
+const handleNext = () => {
+  if (currentSongIndex < setlistSongs.length - 1) {
+    setCurrentSongIndex(currentSongIndex + 1);
+    // Reset scroll, load new song
+  }
+};
+```
+
+---
+
+## Phase 5: Offline Sync 📡
 **Duration**: 7-10 days
 **Priority**: P0 - Critical infrastructure
 **Why Fourth?**: Makes app reliable for live performances (no internet dependency)
@@ -519,7 +724,7 @@ This implementation plan follows a **feature-by-feature approach**, where each p
 
 ---
 
-## Phase 5: Advanced Features ⭐
+## Phase 6: Advanced Features ⭐
 **Duration**: 7-10 days
 **Priority**: P1 - Differentiating features
 **Why Fifth?**: Core CRUD done, now add value-add features
@@ -607,7 +812,7 @@ This implementation plan follows a **feature-by-feature approach**, where each p
 
 ---
 
-## Phase 6: Subscriptions & Polish 💎
+## Phase 7: Subscriptions & Polish 💎
 **Duration**: 5-7 days
 **Priority**: P0 - Monetization
 **Why Last?**: Core features done, now enable revenue

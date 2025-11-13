@@ -165,11 +165,27 @@ export const SetlistDetailScreen = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
   };
 
+  const handleSongPress = useCallback((songIndex: number) => {
+    if (!isEditMode && setlist) {
+      console.log('🎵 Song tapped, navigating to performance mode:', songIndex);
+      navigation.navigate('PerformanceMode', {
+        setlistId: setlist.id,
+        songIndex,
+      });
+    }
+  }, [isEditMode, setlist, navigation]);
+
   const renderItem = useCallback(({ item, drag, isActive }: RenderItemParams<SetlistSongEntry>) => {
     console.log('🎨 Rendering song:', item.song?.title, 'isEditMode:', isEditMode);
+    const songIndex = songs.findIndex((s) => s.id === item.id);
+
     return (
       <View>
-        <View style={[styles.songRow, isActive && { opacity: 0.9, backgroundColor: '#f5f5f5' }]}>
+        <Pressable
+          onPress={() => handleSongPress(songIndex)}
+          disabled={isEditMode}
+          style={[styles.songRow, isActive && { opacity: 0.9, backgroundColor: '#f5f5f5' }]}
+        >
           {/* Hamburger icon - always visible for drag */}
           <Pressable
             onLongPress={drag}
@@ -208,12 +224,12 @@ export const SetlistDetailScreen = () => {
               <Ionicons name="trash-outline" size={20} color="#ff3b30" />
             </Pressable>
           )}
-        </View>
+        </Pressable>
         {/* Divider line */}
         <View style={styles.divider} />
       </View>
     );
-  }, [isEditMode, handleRemoveSong]);
+  }, [isEditMode, handleRemoveSong, handleSongPress, songs]);
 
   if (loading) {
     return (
