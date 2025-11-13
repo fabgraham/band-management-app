@@ -26,7 +26,8 @@ import { BandsStackParamList } from '../../navigation/bandsStack.types';
 // Removed in-card Add Songs button; using header + icon instead
 import { AddSetlistSongsModal } from '../../components/Modals/AddSetlistSongsModal';
 import { ConfirmModal } from '../../components/Modals/ConfirmModal';
-import { showConfirm } from '../../utils/helpers/confirm';
+import { ActionMenuModal } from '../../components/Modals/ActionMenuModal';
+import { CreateSetlistModal } from '../../components/Modals/CreateSetlistModal';
 
 type NavigationProp = NativeStackNavigationProp<BandsStackParamList, 'SetlistDetail'>;
 type RouteProps = RouteProp<BandsStackParamList, 'SetlistDetail'>;
@@ -41,10 +42,12 @@ export const SetlistDetailScreen = () => {
   const [loading, setLoading] = useState(true);
   const [songs, setSongs] = useState<SetlistSongEntry[]>([]);
   const [showAddSongsModal, setShowAddSongsModal] = useState(false);
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const [deleteConfirmType, setDeleteConfirmType] = useState<'setlist' | 'song'>('setlist');
-  const [deleteConfirmData, setDeleteConfirmData] = useState<{ title: string; message: string; onConfirm: () => void } | null>(null);
   const [isEditMode, setIsEditMode] = useState(false);
+  const [showDeleteSetlistModal, setShowDeleteSetlistModal] = useState(false);
+  const [showDeleteSongModal, setShowDeleteSongModal] = useState(false);
+  const [songToDelete, setSongToDelete] = useState<{ id: string; title: string } | null>(null);
+  const [showSetlistMenu, setShowSetlistMenu] = useState(false);
+  const [showEditSetlistModal, setShowEditSetlistModal] = useState(false);
 
   const loadSetlist = useCallback(async () => {
     try {
@@ -86,59 +89,66 @@ export const SetlistDetailScreen = () => {
   };
 
   // Delete Setlist Handler
-  const handleDeleteSetlist = async () => {
+  const handleDeleteSetlist = () => {
+    console.log('🗑️ handleDeleteSetlist called');
+    if (!setlist) return;
+    console.log('✅ Setlist exists, showing delete confirmation modal...');
+    setShowDeleteSetlistModal(true);
+  };
+
+  const confirmDeleteSetlist = async () => {
+    console.log('💥 Delete confirmed, deleting setlist...');
     if (!setlist) return;
 
-    setDeleteConfirmType('setlist');
-    setDeleteConfirmData({
-      title: 'Delete Setlist',
-      message: `Are you sure you want to delete "${setlist.name}"?`,
-      onConfirm: async () => {
-        try {
-          await deleteSetlist(setlist.id);
-          setShowDeleteConfirm(false);
-          navigation.goBack();
-        } catch (error) {
-          Alert.alert(
-            'Error',
-            error instanceof Error ? error.message : 'Failed to delete setlist.'
-          );
-        }
-      }
-    });
-    setShowDeleteConfirm(true);
+    try {
+      setShowDeleteSetlistModal(false);
+      await deleteSetlist(setlist.id);
+      navigation.goBack();
+    } catch (error) {
+      Alert.alert(
+        'Error',
+        error instanceof Error ? error.message : 'Failed to delete setlist.'
+      );
+    }
   };
 
   // Remove Song Handler
-  const handleRemoveSong = async (entryId: string, songTitle: string) => {
-    setDeleteConfirmType('song');
-    setDeleteConfirmData({
-      title: 'Remove Song',
-      message: `Are you sure you want to remove "${songTitle}" from this setlist?`,
-      onConfirm: async () => {
-        try {
-          await removeSongFromSetlist(entryId);
-          setShowDeleteConfirm(false);
-          await loadSetlist();
-        } catch (error) {
-          Alert.alert(
-            'Error',
-            error instanceof Error ? error.message : 'Failed to remove song.'
-          );
-        }
-      }
-    });
-    setShowDeleteConfirm(true);
+  const handleRemoveSong = useCallback((entryId: string, songTitle: string) => {
+    console.log('🗑️ Remove song button clicked for:', songTitle);
+    setSongToDelete({ id: entryId, title: songTitle });
+    setShowDeleteSongModal(true);
+  }, []);
+
+  const confirmDeleteSong = async () => {
+    console.log('💥 Delete song confirmed, removing...');
+    if (!songToDelete) return;
+
+    try {
+      setShowDeleteSongModal(false);
+      await removeSongFromSetlist(songToDelete.id);
+      setSongToDelete(null);
+      await loadSetlist();
+    } catch (error) {
+      Alert.alert(
+        'Error',
+        error instanceof Error ? error.message : 'Failed to remove song.'
+      );
+    }
   };
 
   const handleDragEnd = async ({ data }: { data: SetlistSongEntry[] }) => {
+    console.log('🎯 handleDragEnd called with', data.length, 'songs');
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    setSongs(data);
+    const updatedSongs = data.map((entry, index) => ({
+      ...entry,
+      order_index: index + 1,
+    }));
+    setSongs(updatedSongs);
     try {
       await reorderSetlistSongs(
-        data.map((entry, index) => ({
+        updatedSongs.map((entry) => ({
           id: entry.id,
-          order_index: index + 1,
+          order_index: entry.order_index,
         })),
       );
       await loadSetlist();
@@ -151,54 +161,59 @@ export const SetlistDetailScreen = () => {
   };
 
   const handleDragBegin = () => {
+    console.log('🚀 handleDragBegin called - drag started');
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
   };
 
-  const renderItem = ({ item, drag, isActive }: RenderItemParams<SetlistSongEntry>) => (
-    <View>
-      <Pressable
-        onLongPress={drag}
-        disabled={isActive}
-        style={[styles.songRow, isActive && { opacity: 0.9, backgroundColor: '#f5f5f5' }]}
-      >
-        {/* Hamburger icon - always visible for drag */}
-        <View style={styles.dragHandle}>
-          <Ionicons name="reorder-three-outline" size={24} color="#6e6e73" />
-        </View>
-
-        {/* Song info */}
-        <View style={styles.songInfo}>
-          <View style={styles.songTitleRow}>
-            <Text style={styles.songNumber}>{item.order_index}.</Text>
-            <Text style={styles.songTitle} numberOfLines={1}>
-              {item.song?.title || 'Unknown Song'}
-            </Text>
-          </View>
-          <Text style={styles.songMeta} numberOfLines={1}>
-            {item.song?.artist || 'Unknown Artist'}
-            {item.song?.key && ` · ${item.song.key}`}
-            {item.song?.duration_seconds && ` · ${Math.floor(item.song.duration_seconds / 60)}:${(item.song.duration_seconds % 60).toString().padStart(2, '0')}`}
-          </Text>
-        </View>
-
-        {/* Delete button - only visible in edit mode */}
-        {isEditMode && (
+  const renderItem = useCallback(({ item, drag, isActive }: RenderItemParams<SetlistSongEntry>) => {
+    console.log('🎨 Rendering song:', item.song?.title, 'isEditMode:', isEditMode);
+    return (
+      <View>
+        <View style={[styles.songRow, isActive && { opacity: 0.9, backgroundColor: '#f5f5f5' }]}>
+          {/* Hamburger icon - always visible for drag */}
           <Pressable
-            style={styles.songDeleteButton}
-            onPress={(e) => {
-              e.stopPropagation();
-              handleRemoveSong(item.id, item.song?.title || 'Unknown Song');
-            }}
+            onLongPress={drag}
+            delayLongPress={200}
+            style={styles.dragHandle}
             hitSlop={8}
           >
-            <Ionicons name="trash-outline" size={20} color="#ff3b30" />
+            <Ionicons name="reorder-three-outline" size={24} color="#6e6e73" />
           </Pressable>
-        )}
-      </Pressable>
-      {/* Divider line */}
-      <View style={styles.divider} />
-    </View>
-  );
+
+          {/* Song info */}
+          <View style={styles.songInfo}>
+            <View style={styles.songTitleRow}>
+              <Text style={styles.songNumber}>{item.order_index}.</Text>
+              <Text style={styles.songTitle} numberOfLines={1}>
+                {item.song?.title || 'Unknown Song'}
+              </Text>
+            </View>
+            <Text style={styles.songMeta} numberOfLines={1}>
+              {item.song?.artist || 'Unknown Artist'}
+              {item.song?.key && ` · ${item.song.key}`}
+              {item.song?.duration_seconds && ` · ${Math.floor(item.song.duration_seconds / 60)}:${(item.song.duration_seconds % 60).toString().padStart(2, '0')}`}
+            </Text>
+          </View>
+
+          {/* Delete button - only visible in edit mode */}
+          {isEditMode && (
+            <Pressable
+              style={styles.songDeleteButton}
+              onPress={() => {
+                console.log('🗑️ Delete song button pressed:', item.song?.title);
+                handleRemoveSong(item.id, item.song?.title || 'Unknown Song');
+              }}
+              hitSlop={8}
+            >
+              <Ionicons name="trash-outline" size={20} color="#ff3b30" />
+            </Pressable>
+          )}
+        </View>
+        {/* Divider line */}
+        <View style={styles.divider} />
+      </View>
+    );
+  }, [isEditMode, handleRemoveSong]);
 
   if (loading) {
     return (
@@ -226,17 +241,23 @@ export const SetlistDetailScreen = () => {
         <Text style={[styles.headerTitle, { color: '#ffffff' }]} numberOfLines={1}>
           {setlist.name}
         </Text>
-        <View style={styles.headerActions} pointerEvents="box-none">
+        <View style={styles.headerActions}>
           <Pressable
             style={styles.headerButton}
-            onPress={() => setShowAddSongsModal(true)}
+            onPress={() => {
+              console.log('➕ Add songs button pressed');
+              setShowAddSongsModal(true);
+            }}
             hitSlop={8}
           >
             <Ionicons name="add" size={22} color="#ffffff" />
           </Pressable>
           <Pressable
             style={styles.headerButton}
-            onPress={() => setIsEditMode(!isEditMode)}
+            onPress={() => {
+              console.log('✏️ Edit mode toggle pressed, current:', isEditMode);
+              setIsEditMode(!isEditMode);
+            }}
             hitSlop={8}
           >
             {isEditMode ? (
@@ -247,10 +268,10 @@ export const SetlistDetailScreen = () => {
           </Pressable>
           <Pressable
             style={styles.headerButton}
-            onPress={handleDeleteSetlist}
+            onPress={() => setShowSetlistMenu(true)}
             hitSlop={8}
           >
-            <Ionicons name="trash-outline" size={22} color="#ff3b30" />
+            <Ionicons name="ellipsis-horizontal-circle-outline" size={24} color="#ffffff" />
           </Pressable>
         </View>
       </View>
@@ -275,6 +296,8 @@ export const SetlistDetailScreen = () => {
             renderItem={renderItem}
             onDragBegin={handleDragBegin}
             onDragEnd={handleDragEnd}
+            activationDistance={10}
+            extraData={isEditMode}
             contentContainerStyle={styles.listContent}
           />
         )}
@@ -292,15 +315,61 @@ export const SetlistDetailScreen = () => {
         }}
       />
 
-     <ConfirmModal
-       visible={showDeleteConfirm}
-       title={deleteConfirmData?.title || ''}
-       message={deleteConfirmData?.message || ''}
-       confirmText={deleteConfirmType === 'setlist' ? 'Delete' : 'Remove'}
-       destructive={true}
-       onConfirm={() => deleteConfirmData?.onConfirm?.()}
-       onCancel={() => setShowDeleteConfirm(false)}
-     />
+      <ConfirmModal
+        visible={showDeleteSetlistModal}
+        title="Delete Setlist"
+        message={`Are you sure you want to delete "${setlist.name}"? This will remove all songs from the setlist.`}
+        confirmText="Delete"
+        destructive={true}
+        showCancelButton={false}
+        onConfirm={confirmDeleteSetlist}
+        onCancel={() => setShowDeleteSetlistModal(false)}
+      />
+
+      <ConfirmModal
+        visible={showDeleteSongModal}
+        title="Remove Song"
+        message={`Are you sure you want to remove "${songToDelete?.title}" from this setlist?`}
+        confirmText="Remove"
+        destructive={true}
+        showCancelButton={false}
+        onConfirm={confirmDeleteSong}
+        onCancel={() => setShowDeleteSongModal(false)}
+      />
+
+      <ActionMenuModal
+        visible={showSetlistMenu}
+        onClose={() => setShowSetlistMenu(false)}
+        items={[
+          {
+            label: 'Edit Setlist',
+            icon: 'create-outline',
+            onPress: () => {
+              setShowEditSetlistModal(true);
+            },
+          },
+          {
+            label: 'Delete Setlist',
+            icon: 'trash-outline',
+            destructive: true,
+            onPress: () => {
+              handleDeleteSetlist();
+            },
+          },
+        ]}
+      />
+
+      <CreateSetlistModal
+        visible={showEditSetlistModal}
+        onClose={() => setShowEditSetlistModal(false)}
+        bandId={setlist.band_id}
+        setlist={setlist}
+        onSuccess={async () => {
+          setShowEditSetlistModal(false);
+          await loadSetlist();
+        }}
+      />
+
    </View>
  );
 };

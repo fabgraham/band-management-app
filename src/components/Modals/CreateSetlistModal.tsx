@@ -19,6 +19,7 @@ interface CreateSetlistModalProps {
   bandId: string;
   onSuccess?: (setlist: Setlist) => void;
   setlist?: Setlist;
+  onDelete?: (setlistId: string) => void;
 }
 
 export const CreateSetlistModal = ({
@@ -27,6 +28,7 @@ export const CreateSetlistModal = ({
   bandId,
   onSuccess,
   setlist,
+  onDelete,
 }: CreateSetlistModalProps) => {
   const { theme } = useTheme();
   const [name, setName] = useState('');
@@ -92,6 +94,12 @@ export const CreateSetlistModal = ({
       );
       setIsSubmitting(false);
     }
+  };
+
+  const handleDelete = () => {
+    if (!setlist || !onDelete) return;
+    onDelete(setlist.id);
+    handleClose();
   };
 
   return (

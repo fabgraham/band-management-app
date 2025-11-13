@@ -238,6 +238,35 @@ export const BandDetailScreen = ({ route, navigation }: Props) => {
     );
   };
 
+  const handleDeleteSetlistFromModal = async (setlistId: string) => {
+    const target = setlists.find(s => s.id === setlistId);
+    if (!target) return;
+
+    Alert.alert(
+      'Delete Setlist',
+      `Delete "${target.name}"? This will remove all songs from the setlist.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await deleteSetlistService(setlistId);
+              Alert.alert('Success', 'Setlist deleted successfully');
+              loadSetlists();
+            } catch (error) {
+              Alert.alert(
+                'Error',
+                error instanceof Error ? error.message : 'Failed to delete setlist',
+              );
+            }
+          },
+        },
+      ],
+    );
+  };
+
   const handleDeleteBand = () => {
     Alert.alert(
       'Delete Band',
@@ -504,32 +533,12 @@ export const BandDetailScreen = ({ route, navigation }: Props) => {
                       >
                         <View style={styles.setlistCardHeader}>
                           <Text style={styles.setlistName}>{item.name}</Text>
-                          <View style={styles.setlistActions}>
-                            <Pressable
-                              style={styles.setlistActionButton}
-                              onPress={(e) => {
-                                e.stopPropagation();
-                                handleEditSetlist(item);
-                              }}
-                            >
-                              <Ionicons name="create-outline" size={20} color="#123053" />
-                            </Pressable>
-                            <Pressable
-                              style={styles.setlistActionButton}
-                              onPress={(e) => {
-                                e.stopPropagation();
-                                handleDeleteSetlist(item);
-                              }}
-                            >
-                              <Ionicons name="trash-outline" size={20} color="#ff3b30" />
-                            </Pressable>
-                          </View>
                         </View>
-                        <Text style={styles.setlistDate}>
-                          {item.show_date
-                            ? new Date(`${item.show_date}T00:00:00`).toLocaleDateString()
-                            : 'No date set'}
-                        </Text>
+                        {item.show_date && (
+                          <Text style={styles.setlistDate}>
+                            {new Date(`${item.show_date}T00:00:00`).toLocaleDateString()}
+                          </Text>
+                        )}
                         <View style={styles.setlistStats}>
                           <View style={styles.setlistStat}>
                             <Text style={styles.setlistStatLabel}>Songs</Text>
@@ -732,15 +741,18 @@ export const BandDetailScreen = ({ route, navigation }: Props) => {
         visible={showCreateSetlistModal}
         onClose={() => {
           setShowCreateSetlistModal(false);
-          setSetlistEditing(null);
+          // Clear editing state after modal animation completes (300ms)
+          setTimeout(() => setSetlistEditing(null), 300);
         }}
         bandId={band.id}
         setlist={setlistEditing ?? undefined}
         onSuccess={async () => {
-          await loadSetlists();
           setShowCreateSetlistModal(false);
-          setSetlistEditing(null);
+          // Clear editing state after modal animation completes (300ms)
+          setTimeout(() => setSetlistEditing(null), 300);
+          await loadSetlists();
         }}
+        onDelete={handleDeleteSetlistFromModal}
       />
     </View>
   );
@@ -962,6 +974,7 @@ const styles = StyleSheet.create({
   setlistScroll: {
     flex: 1,
     paddingHorizontal: 16,
+    paddingTop: 16,
   },
   setlistCard: {
     backgroundColor: '#ffffff',
@@ -980,20 +993,6 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '600',
     color: '#1c1c1e',
-    flex: 1,
-    marginRight: 12,
-  },
-  setlistActions: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  setlistActionButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: '#f2f2f7',
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   setlistDate: {
     color: '#6e6e73',
@@ -1001,11 +1000,12 @@ const styles = StyleSheet.create({
   },
   setlistStats: {
     flexDirection: 'row',
-    gap: 24,
+    gap: 16,
     marginTop: 16,
   },
   setlistStat: {
-    flex: 1,
+    flex: 0,
+    minWidth: '30%',
   },
   setlistStatLabel: {
     color: '#6e6e73',

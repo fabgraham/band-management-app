@@ -1542,6 +1542,81 @@ The following work was completed or attempted to improve stability and clarity a
 
 ---
 
+### Setlist UI Polish and UX Improvements (November 13, 2025)
+
+**Major Changes:**
+
+**1) Three-Dot Menu for Setlist Actions**
+- Removed edit/delete buttons from individual setlist cards in BandDetailScreen for cleaner design
+- Added three-dot menu icon in SetlistDetailScreen header for centralized setlist management
+- Menu items: "Edit Setlist" and "Delete Setlist" with proper destructive styling
+- Created reusable `ActionMenuModal` component for consistent menu UI across the app
+
+**2) Setlist Card Styling Improvements**
+- Removed "No date set" text from setlist cards (date field cannot be set, making text unnecessary)
+- Added 16px padding to top of setlist scroll area for better header spacing
+- Adjusted setlist stats layout from `flex: 1` to `flex: 0` with `minWidth: 30%` for tighter grouping
+- Reduced gap between "Songs" and "Duration" stats from 24px to 16px for better visual cohesion
+
+**3) Delete Functionality Refinements**
+- Confirmed ConfirmModal works correctly for both setlist and song deletion
+- Set `showCancelButton={false}` for streamlined delete confirmation flow
+- All delete operations now use ConfirmModal instead of Alert.alert for web compatibility
+- Added proper modal close timing with `setTimeout` to prevent animation glitches
+
+**4) Edit Setlist Modal Integration**
+- Integrated CreateSetlistModal into SetlistDetailScreen for in-place editing
+- Modal opens from three-dot menu "Edit Setlist" option
+- Successfully reloads setlist data after editing via `onSuccess` callback
+- Removed delete button from CreateSetlistModal (now handled by menu)
+
+**Files Modified:**
+- `src/screens/Setlists/SetlistDetailScreen.tsx` - Added three-dot menu, ActionMenuModal, and CreateSetlistModal integration
+- `src/screens/Bands/BandDetailScreen.tsx` - Removed action buttons from setlist cards, improved stats layout
+- `src/components/Modals/ActionMenuModal.tsx` - NEW: Reusable menu modal component
+- `src/components/Modals/ConfirmModal.tsx` - Added `showCancelButton` prop for optional cancel button
+- `src/components/Modals/CreateSetlistModal.tsx` - Removed unused delete button from UI
+
+**Key Components Created:**
+
+**ActionMenuModal:**
+```typescript
+interface ActionMenuItem {
+  label: string;
+  icon: keyof typeof Ionicons.glyphMap;
+  onPress: () => void;
+  destructive?: boolean;
+}
+
+// Reusable menu modal with:
+// - Icon + label for each item
+// - Destructive styling (red text) for dangerous actions
+// - Fade animation
+// - Backdrop close
+// - Customizable item list
+```
+
+**Styling Details:**
+- `setlistScroll` - Added `paddingTop: 16` (line 977)
+- `setlistStats` - Changed `gap: 24` to `gap: 16` (line 1003)
+- `setlistStat` - Changed from `flex: 1` to `flex: 0, minWidth: '30%'` (lines 1006-1008)
+- `setlistDate` - Conditionally rendered only when `show_date` exists (lines 537-541)
+
+**UX Improvements:**
+- Cleaner setlist cards without visual clutter
+- Consistent action placement (three-dot menu pattern)
+- Better spacing and visual hierarchy
+- Streamlined delete confirmation flow
+- Web-compatible modals throughout
+
+**Location References for Future Adjustments:**
+- Setlist card spacing: `BandDetailScreen.tsx:977` (setlistScroll paddingTop)
+- Stats gap: `BandDetailScreen.tsx:1003` (setlistStats gap)
+- Stats width: `BandDetailScreen.tsx:1007` (setlistStat minWidth)
+- Date visibility: `BandDetailScreen.tsx:537-541` (conditional rendering)
+
+---
+
 ## Phase 3: Setlist Management (Ready to Begin)
 
 **Status:** Ready for implementation

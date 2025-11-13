@@ -11,6 +11,7 @@ interface ConfirmModalProps {
   onConfirm: () => void;
   onCancel: () => void;
   destructive?: boolean;
+  showCancelButton?: boolean;
 }
 
 export const ConfirmModal = ({
@@ -22,6 +23,7 @@ export const ConfirmModal = ({
   onConfirm,
   onCancel,
   destructive = false,
+  showCancelButton = true,
 }: ConfirmModalProps) => {
   const { theme } = useTheme();
 
@@ -37,13 +39,15 @@ export const ConfirmModal = ({
             {message}
           </Text>
           <View style={styles.buttonContainer}>
-            <ThemedButton
-              label={cancelText}
-              onPress={onCancel}
-              backgroundColor="#f0f0f0"
-              style={styles.button}
-              textStyle={{ color: '#333' }}
-            />
+            {showCancelButton && (
+              <ThemedButton
+                label={cancelText}
+                onPress={onCancel}
+                backgroundColor="#f0f0f0"
+                style={styles.button}
+                textStyle={{ color: '#333' }}
+              />
+            )}
             <ThemedButton
               label={confirmText}
               onPress={onConfirm}
