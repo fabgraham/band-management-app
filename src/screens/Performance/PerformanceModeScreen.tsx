@@ -3,6 +3,7 @@ import {
   ActivityIndicator,
   Alert,
   Animated,
+  Easing,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -37,6 +38,8 @@ export const PerformanceModeScreen = () => {
   const [fontSize, setFontSize] = useState(DEFAULT_FONT_SIZE);
   const [isPlaying, setIsPlaying] = useState(false);
   const [showEditSongModal, setShowEditSongModal] = useState(false);
+  const [lyricsContentHeight, setLyricsContentHeight] = useState(0);
+  const [scrollViewHeight, setScrollViewHeight] = useState(0);
 
   const scrollViewRef = useRef<ScrollView>(null);
   const scrollY = useRef(new Animated.Value(0)).current;
@@ -80,6 +83,23 @@ export const PerformanceModeScreen = () => {
     }, [loadSetlist]),
   );
 
+  useEffect(() => {
+    return () => {
+      if (animationRef.current) {
+        animationRef.current.stop();
+      }
+      if (scrollListenerRef.current) {
+        scrollY.removeListener(scrollListenerRef.current);
+        scrollListenerRef.current = null;
+      }
+    };
+  }, []);
+
+  useEffect(() => {
+    scrollViewRef.current?.scrollTo({ y: 0, animated: false });
+    scrollY.setValue(0);
+  }, [currentIndex]);
+
   const currentSong = setlist?.songs[currentIndex]?.song;
 
   const handlePrevious = () => {
@@ -104,6 +124,8 @@ export const PerformanceModeScreen = () => {
     }
   };
 
+  const scrollListenerRef = useRef<string | null>(null);
+
   const startAutoScroll = () => {
     if (!currentSong?.duration_seconds || !currentSong?.lyrics) {
       Alert.alert('Cannot Auto-Scroll', 'Song duration or lyrics not available.');
@@ -112,24 +134,37 @@ export const PerformanceModeScreen = () => {
 
     setIsPlaying(true);
 
-    // Calculate scroll distance based on content height
-    // We'll need to estimate content height based on lyrics length
-    const linesCount = currentSong.lyrics.split('\n').length;
-    const lineHeight = fontSize * 1.6; // Approximate line height
-    const totalHeight = linesCount * lineHeight;
+    const lineHeight = fontSize * 1.6;
+    const estimatedHeight = currentSong.lyrics.split('\n').length * lineHeight;
+    const contentHeight = Math.max(lyricsContentHeight, estimatedHeight);
+    const containerHeight = Math.max(scrollViewHeight, 1);
+    const scrollDistance = Math.max(contentHeight - containerHeight, 0);
     const scrollDuration = currentSong.duration_seconds * 1000; // Convert to ms
 
     scrollY.setValue(0);
+    if (scrollListenerRef.current) {
+      scrollY.removeListener(scrollListenerRef.current);
+      scrollListenerRef.current = null;
+    }
+
+    scrollListenerRef.current = scrollY.addListener(({ value }) => {
+      scrollViewRef.current?.scrollTo({ y: value, animated: false });
+    });
 
     animationRef.current = Animated.timing(scrollY, {
-      toValue: totalHeight,
+      toValue: scrollDistance,
       duration: scrollDuration,
-      useNativeDriver: true,
+      useNativeDriver: false,
+      easing: Easing.linear,
     });
 
     animationRef.current.start(({ finished }) => {
       if (finished) {
         setIsPlaying(false);
+        if (scrollListenerRef.current) {
+          scrollY.removeListener(scrollListenerRef.current);
+          scrollListenerRef.current = null;
+        }
       }
     });
   };
@@ -138,6 +173,10 @@ export const PerformanceModeScreen = () => {
     if (animationRef.current) {
       animationRef.current.stop();
       animationRef.current = null;
+    }
+    if (scrollListenerRef.current) {
+      scrollY.removeListener(scrollListenerRef.current);
+      scrollListenerRef.current = null;
     }
     setIsPlaying(false);
   };
@@ -252,6 +291,8 @@ export const PerformanceModeScreen = () => {
         style={styles.lyricsContainer}
         contentContainerStyle={styles.lyricsContent}
         showsVerticalScrollIndicator={true}
+        onContentSizeChange={(_, height) => setLyricsContentHeight(height)}
+        onLayout={(event) => setScrollViewHeight(event.nativeEvent.layout.height)}
       >
         {currentSong.lyrics ? (
           <Text style={[styles.lyricsText, { fontSize, lineHeight: fontSize * 1.6 }]}>
