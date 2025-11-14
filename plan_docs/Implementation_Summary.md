@@ -11,11 +11,12 @@ This document serves as a comprehensive reference for all features implemented i
 1. [Architecture Overview](#architecture-overview)
 2. [Phase 1: Band Management](#phase-1-band-management)
 3. [Phase 2: Song Library](#phase-2-song-library)
-4. [Database Schema Fixes and Troubleshooting](#database-schema-fixes-and-troubleshooting-november-2025) **(NEW - Nov 2025)**
-5. [Database Schema Summary](#database-schema-summary)
-6. [File Structure](#file-structure)
-7. [Next Steps](#next-steps)
-8. [Recent Changes](#recent-changes-november-2025) **(NEW - Nov 2025)**
+4. [Phase 5: Member Management](#phase-5-member-management) **(NEW - Nov 2025)**
+5. [Database Schema Fixes and Troubleshooting](#database-schema-fixes-and-troubleshooting-november-2025) **(NEW - Nov 2025)**
+6. [Database Schema Summary](#database-schema-summary)
+7. [File Structure](#file-structure)
+8. [Next Steps](#next-steps)
+9. [Recent Changes](#recent-changes-november-2025) **(NEW - Nov 2025)**
 
 ---
 
@@ -1031,6 +1032,93 @@ if (songCount >= 10) {
 **Check Location:** `AddSongModal.tsx` (lines 142-154)
 
 **Important:** Limit check only applies to song creation, not updates
+
+---
+
+## Phase 5: Member Management
+
+### Overview
+Implements role-based member collaboration per band, including invitations, shared access via RLS, service APIs, and UI for managing members. This phase enables owners and admins to invite collaborators and manage roles. End-to-end testing remains pending.
+
+### Database Schema
+
+**Files:**
+- `supabase/phase5-member-management.sql`
+- `supabase/phase5-member-management-policies-simple.sql`
+- `supabase/phase5-update-existing-policies-fixed.sql`
+
+**Tables:**
+- `band_members` (id, band_id, user_id, role, joined_at, timestamps, unique(band_id,user_id))
+- `band_invitations` (id, band_id, invited_by, invited_email, role, invitation_token, status, expires_at, accepted_at, timestamps)
+
+**Functions and Triggers:**
+- `update_updated_at_column()` and triggers for both tables
+- `process_invitation_on_signup()` trigger on `auth.users` to auto-accept pending invitations and create `band_members`
+
+### RLS Policies
+
+**New Tables:**
+- `band_members`: select if viewer is a member; insert/update/delete restricted to roles (owners can change roles and delete non-owners)
+- `band_invitations`: owners/admins can create; inviters can cancel; invited users can accept/decline; users can view their own pending invites
+
+**Shared Access Updates:**
+- Updated policies for `bands`, `songs`, `setlists`, `setlist_songs` to allow members (any role) to read/write within their band
+- Fixed policy references to use `created_by` instead of `owner_id` in `bands`
+
+### Type Definitions
+
+**File:** `src/types/member.ts`
+- Role types: `owner | admin | member`
+- Permission helpers: `hasPermission`, `canManageMember`, display helpers
+
+### Service Layer
+
+**File:** `src/services/data/memberService.ts`
+- `getBandMembers(bandId)` embeds user via `users!band_members_user_id_fkey` (fixed PostgREST embedding)
+- `getBandMember(memberId)` embeds user via `users!band_members_user_id_fkey`
+- `getBandInvitations(bandId)` embeds `bands!band_id` and `users!band_invitations_invited_by_fkey`
+- `getUserPendingInvitations(email)` embeds `bands!band_id` and `users!band_invitations_invited_by_fkey`
+- `createBandInvitation(payload)` generates token and inserts
+- `respondToInvitation(invitationId, status, userId)` validates, updates status, and adds member on accept
+- `addBandMember`, `updateBandMember`, `removeBandMember`
+- Permission helpers: `canInviteMembers`, `canManageMembers`
+
+### UI Components
+
+**Members screen:** `src/screens/Members/MembersScreen.tsx`
+- Lists members with role badges; actions gated by permissions
+- Statistics for total members and role counts
+- Empty state shown when no members; “Band Members” header hidden when empty
+- Responds to top nav `+` to open the invite modal
+
+**Invite modal:** `src/components/Modals/InviteMemberModal.tsx`
+- Floating centered modal with backdrop tap to dismiss
+- Title: “Invite a Band Member”
+- Email validation and role selection (admin/member)
+- Removed header close and cancel button; outside tap dismisses
+
+**Pending invitations:** `src/components/Members/PendingInvitations.tsx`
+- Lists user’s pending invitations with accept/decline
+- Fixed spinner logic during processing
+
+### Navigation Updates
+
+**File:** `src/screens/Bands/BandDetailScreen.tsx`
+- Members tab shows `+` header action to open invite modal
+- Trash icon removed from top nav for now; edit remains on non-members tabs
+- Passes `inviteTrigger` to `MembersScreen` to open modal on demand
+
+### Bug Fixes (Phase 5)
+
+- Fixed PostgREST select parse error by using explicit FK embeddings in `memberService.ts`
+- Corrected `ConfirmModal` named import in `MembersScreen.tsx`
+- Fixed spinner conditions in `PendingInvitations.tsx`
+- Converted invite modal to true centered modal and removed cancel/close buttons
+
+### Status
+
+- Implementation: Complete
+- Testing: Pending (end-to-end member invitation and shared access verification)
 
 ---
 

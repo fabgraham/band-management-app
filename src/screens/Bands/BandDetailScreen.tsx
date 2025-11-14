@@ -40,6 +40,7 @@ export const BandDetailScreen = ({ route, navigation }: Props) => {
 
   // Tab state
   const [activeTab, setActiveTab] = useState<TabType>('overview');
+  const [inviteMemberTrigger, setInviteMemberTrigger] = useState(0);
 
   // Song management state
   const [songs, setSongs] = useState<Song[]>([]);
@@ -577,7 +578,7 @@ export const BandDetailScreen = ({ route, navigation }: Props) => {
         );
 
       case 'members':
-        return <MembersScreen bandId={bandId} />;
+        return <MembersScreen bandId={bandId} inviteTrigger={inviteMemberTrigger} />;
 
       default:
         return null;
@@ -620,16 +621,19 @@ export const BandDetailScreen = ({ route, navigation }: Props) => {
       );
     }
 
-    // For overview and other tabs, show edit and delete
+    if (activeTab === 'members') {
+      return (
+        <Pressable onPress={() => setInviteMemberTrigger((t) => t + 1)} style={styles.headerButton}>
+          <Ionicons name="add" size={24} color="#ffffff" />
+        </Pressable>
+      );
+    }
+
+    // For overview and other tabs, show edit (trash removed for now)
     return (
-      <>
-        <Pressable onPress={() => setShowEditModal(true)} style={styles.headerButton}>
-          <Ionicons name="create-outline" size={24} color="#ffffff" />
-        </Pressable>
-        <Pressable onPress={handleDeleteBand} style={styles.headerButton}>
-          <Ionicons name="trash-outline" size={24} color="#ffffff" />
-        </Pressable>
-      </>
+      <Pressable onPress={() => setShowEditModal(true)} style={styles.headerButton}>
+        <Ionicons name="create-outline" size={24} color="#ffffff" />
+      </Pressable>
     );
   };
 

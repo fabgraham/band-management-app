@@ -38,7 +38,7 @@ export async function getBandMembers(bandId: string): Promise<BandMemberWithDeta
     .from(BAND_MEMBERS_TABLE)
     .select(`
       *,
-      user:auth.users!user_id (
+      user:users!band_members_user_id_fkey (
         id,
         email,
         user_metadata
@@ -60,7 +60,7 @@ export async function getBandMember(memberId: string): Promise<BandMemberWithDet
     .from(BAND_MEMBERS_TABLE)
     .select(`
       *,
-      user:auth.users!user_id (
+      user:users!band_members_user_id_fkey (
         id,
         email,
         user_metadata
@@ -188,11 +188,11 @@ export async function getBandInvitations(bandId: string): Promise<BandInvitation
     .from(BAND_INVITATIONS_TABLE)
     .select(`
       *,
-      band:public.bands!band_id (
+      band:bands!band_id (
         id,
         name
       ),
-      inviter:auth.users!invited_by (
+      inviter:users!band_invitations_invited_by_fkey (
         id,
         email,
         user_metadata
@@ -213,11 +213,11 @@ export async function getUserPendingInvitations(userEmail: string): Promise<Band
     .from(BAND_INVITATIONS_TABLE)
     .select(`
       *,
-      band:public.bands!band_id (
+      band:bands!band_id (
         id,
         name
       ),
-      inviter:auth.users!invited_by (
+      inviter:users!band_invitations_invited_by_fkey (
         id,
         email,
         user_metadata

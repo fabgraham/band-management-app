@@ -115,7 +115,7 @@ const PendingInvitations: React.FC<PendingInvitationsProps> = ({ onInvitationAcc
             onPress={() => handleRespondToInvitation(invitation, false)}
             disabled={isProcessing}
           >
-            {isProcessing && !accept ? (
+            {isProcessing ? (
               <ActivityIndicator size="small" color="#666" />
             ) : (
               <Text style={styles.declineButtonText}>Decline</Text>
@@ -126,7 +126,7 @@ const PendingInvitations: React.FC<PendingInvitationsProps> = ({ onInvitationAcc
             onPress={() => handleRespondToInvitation(invitation, true)}
             disabled={isProcessing}
           >
-            {isProcessing && accept ? (
+            {isProcessing ? (
               <ActivityIndicator size="small" color="#FFFFFF" />
             ) : (
               <Text style={styles.acceptButtonText}>Accept</Text>

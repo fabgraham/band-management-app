@@ -13,6 +13,7 @@ import {
   Platform,
   ScrollView,
   ActivityIndicator,
+  Modal,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../context/AuthContext';
@@ -109,124 +110,123 @@ const InviteMemberModal: React.FC<InviteMemberModalProps> = ({
   ];
 
   return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      style={styles.container}
-    >
-      <Pressable style={styles.backdrop} onPress={onClose}>
-        <Pressable style={styles.modalContainer} onPress={(e) => e.stopPropagation()}>
-          <View style={styles.header}>
-            <Text style={styles.title}>Invite Member</Text>
-            <Pressable onPress={onClose} style={styles.closeButton}>
-              <Ionicons name="close" size={24} color="#666" />
-            </Pressable>
-          </View>
+    <Modal visible={visible} animationType="fade" transparent onRequestClose={onClose}>
+      <View style={styles.overlay}>
+        <Pressable style={styles.backdrop} onPress={onClose} />
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          style={{ width: '100%', alignItems: 'center' }}
+          pointerEvents="box-none"
+        >
+          <View style={styles.modalContainer}>
+            <View style={styles.header}>
+              <Text style={styles.title}>Invite a Band Member</Text>
+            </View>
 
-          <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-            <View style={styles.section}>
-              <Text style={styles.label}>Email Address</Text>
-              <TextInput
-                style={[styles.input, emailError && styles.inputError]}
-                placeholder="Enter email address"
-                value={email}
-                onChangeText={handleEmailChange}
-                keyboardType="email-address"
-                autoCapitalize="none"
-                autoCorrect={false}
-                editable={!isSubmitting}
-              />
-              {emailError ? (
-                <Text style={styles.errorText}>{emailError}</Text>
-              ) : (
-                <Text style={styles.helpText}>
-                  Enter the email address of the person you want to invite
+            <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+              <View style={styles.section}>
+                <Text style={styles.label}>Email Address</Text>
+                <TextInput
+                  style={[styles.input, emailError && styles.inputError]}
+                  placeholder="Enter email address"
+                  value={email}
+                  onChangeText={handleEmailChange}
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  editable={!isSubmitting}
+                />
+                {emailError ? (
+                  <Text style={styles.errorText}>{emailError}</Text>
+                ) : (
+                  <Text style={styles.helpText}>
+                    Enter the email address of the person you want to invite
+                  </Text>
+                )}
+              </View>
+
+              <View style={styles.section}>
+                <Text style={styles.label}>Role</Text>
+                <Text style={styles.description}>
+                  Choose what this member can do in your band
                 </Text>
-              )}
-            </View>
-
-            <View style={styles.section}>
-              <Text style={styles.label}>Role</Text>
-              <Text style={styles.description}>
-                Choose what this member can do in your band
-              </Text>
-              
-              {roleOptions.map((option) => (
-                <Pressable
-                  key={option.value}
-                  style={[
-                    styles.roleOption,
-                    selectedRole === option.value && styles.roleOptionSelected,
-                  ]}
-                  onPress={() => setSelectedRole(option.value)}
-                  disabled={isSubmitting}
-                >
-                  <View style={styles.roleOptionContent}>
-                    <View style={styles.roleOptionHeader}>
-                      <View style={styles.radioButton}>
-                        {selectedRole === option.value && (
-                          <View style={styles.radioButtonSelected} />
-                        )}
+                
+                {roleOptions.map((option) => (
+                  <Pressable
+                    key={option.value}
+                    style={[
+                      styles.roleOption,
+                      selectedRole === option.value && styles.roleOptionSelected,
+                    ]}
+                    onPress={() => setSelectedRole(option.value)}
+                    disabled={isSubmitting}
+                  >
+                    <View style={styles.roleOptionContent}>
+                      <View style={styles.roleOptionHeader}>
+                        <View style={styles.radioButton}>
+                          {selectedRole === option.value && (
+                            <View style={styles.radioButtonSelected} />
+                          )}
+                        </View>
+                        <Text style={styles.roleOptionLabel}>{option.label}</Text>
                       </View>
-                      <Text style={styles.roleOptionLabel}>{option.label}</Text>
+                      <Text style={styles.roleOptionDescription}>
+                        {getRoleDescription(option.value)}
+                      </Text>
                     </View>
-                    <Text style={styles.roleOptionDescription}>
-                      {getRoleDescription(option.value)}
-                    </Text>
-                  </View>
-                </Pressable>
-              ))}
-            </View>
+                  </Pressable>
+                ))}
+              </View>
 
-            <View style={styles.infoSection}>
-              <Ionicons name="information-circle-outline" size={16} color="#007AFF" />
-              <Text style={styles.infoText}>
-                The invited person will receive an email with instructions to join your band.
-                Invitations expire after 7 days.
-              </Text>
-            </View>
-          </ScrollView>
+              <View style={styles.infoSection}>
+                <Ionicons name="information-circle-outline" size={16} color="#007AFF" />
+                <Text style={styles.infoText}>
+                  The invited person will receive an email with instructions to join your band.
+                  Invitations expire after 7 days.
+                </Text>
+              </View>
+            </ScrollView>
 
-          <View style={styles.footer}>
-            <Pressable
-              style={[styles.button, styles.cancelButton]}
-              onPress={onClose}
-              disabled={isSubmitting}
-            >
-              <Text style={styles.cancelButtonText}>Cancel</Text>
-            </Pressable>
-            <Pressable
-              style={[styles.button, styles.submitButton, isSubmitting && styles.buttonDisabled]}
-              onPress={handleSubmit}
-              disabled={isSubmitting}
-            >
-              {isSubmitting ? (
-                <ActivityIndicator size="small" color="#FFFFFF" />
-              ) : (
-                <Text style={styles.submitButtonText}>Send Invitation</Text>
-              )}
-            </Pressable>
+            <View style={styles.footer}>
+              <Pressable
+                style={[styles.button, styles.submitButton, isSubmitting && styles.buttonDisabled]}
+                onPress={handleSubmit}
+                disabled={isSubmitting}
+              >
+                {isSubmitting ? (
+                  <ActivityIndicator size="small" color="#FFFFFF" />
+                ) : (
+                  <Text style={styles.submitButtonText}>Send Invitation</Text>
+                )}
+              </Pressable>
+            </View>
           </View>
-        </Pressable>
-      </Pressable>
-    </KeyboardAvoidingView>
+        </KeyboardAvoidingView>
+      </View>
+    </Modal>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
+  overlay: {
     flex: 1,
-    justifyContent: 'flex-end',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   backdrop: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'flex-end',
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0, 0, 0, 0.35)',
   },
   modalContainer: {
-    backgroundColor: '#FFFFFF',
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
+    width: '90%',
     maxHeight: '85%',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.25,
+    shadowRadius: 20,
+    elevation: 8,
   },
   header: {
     flexDirection: 'row',
@@ -361,20 +361,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  cancelButton: {
-    backgroundColor: '#F2F2F7',
-    marginRight: 12,
-  },
   submitButton: {
     backgroundColor: '#007AFF',
   },
   buttonDisabled: {
     backgroundColor: '#C7C7CC',
-  },
-  cancelButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#007AFF',
   },
   submitButtonText: {
     fontSize: 16,

@@ -31,13 +31,14 @@ import {
   canManageMember,
 } from '../../types/member';
 import InviteMemberModal from '../../components/Modals/InviteMemberModal';
-import ConfirmModal from '../../components/Modals/ConfirmModal';
+import { ConfirmModal } from '../../components/Modals/ConfirmModal';
 
 interface MembersScreenProps {
   bandId: string;
+  inviteTrigger?: number;
 }
 
-const MembersScreen: React.FC<MembersScreenProps> = ({ bandId }) => {
+const MembersScreen: React.FC<MembersScreenProps> = ({ bandId, inviteTrigger }) => {
   const { user } = useAuth();
   const { activeBand } = useBand();
   const [members, setMembers] = useState<BandMemberWithDetails[]>([]);
@@ -73,6 +74,12 @@ const MembersScreen: React.FC<MembersScreenProps> = ({ bandId }) => {
   useEffect(() => {
     loadMembers();
   }, [loadMembers]);
+
+  useEffect(() => {
+    if (inviteTrigger && inviteTrigger > 0) {
+      setShowInviteModal(true);
+    }
+  }, [inviteTrigger]);
 
   const handleRefresh = () => {
     setRefreshing(true);
@@ -227,10 +234,12 @@ const MembersScreen: React.FC<MembersScreenProps> = ({ bandId }) => {
         )}
 
         {/* Members List */}
-        <View style={styles.membersList}>
-          <Text style={styles.sectionTitle}>Band Members</Text>
-          {members.map(renderMember)}
-        </View>
+        {members.length > 0 && (
+          <View style={styles.membersList}>
+            <Text style={styles.sectionTitle}>Band Members</Text>
+            {members.map(renderMember)}
+          </View>
+        )}
 
         {/* Empty State */}
         {members.length === 0 && (
@@ -239,8 +248,8 @@ const MembersScreen: React.FC<MembersScreenProps> = ({ bandId }) => {
             <Text style={styles.emptyTitle}>No members yet</Text>
             <Text style={styles.emptyText}>
               {canInviteMembers
-                ? 'Invite members to join your band'
-                : 'Ask an admin to invite members to your band'}
+                ? 'Tap on the + icon above to add band members'
+                : 'Tap on the + icon above to add band members'}
             </Text>
           </View>
         )}
