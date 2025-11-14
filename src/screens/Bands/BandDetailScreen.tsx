@@ -23,6 +23,7 @@ import { ThemedButton } from '../../components/Buttons/ThemedButton';
 import { getSongs, deleteSong, searchSongs } from '../../services/data/songService';
 import { getSetlists, deleteSetlist as deleteSetlistService } from '../../services/data/setlistService';
 import { Song, SetlistDetail } from '../../types';
+import MembersScreen from '../Members/MembersScreen';
 
 type Props = NativeStackScreenProps<BandsStackParamList, 'BandDetail'>;
 
@@ -576,19 +577,7 @@ export const BandDetailScreen = ({ route, navigation }: Props) => {
         );
 
       case 'members':
-        return (
-          <View style={styles.tabContent}>
-            <View style={styles.centerContainer}>
-              <Ionicons name="people-outline" size={64} color="#ccc" />
-              <Text style={[theme.typography.title2, { marginTop: 16, color: '#999' }]}>
-                Members Coming Soon
-              </Text>
-              <Text style={[theme.typography.body, { marginTop: 8, color: '#999' }]}>
-                Phase 5 feature
-              </Text>
-            </View>
-          </View>
-        );
+        return <MembersScreen bandId={bandId} />;
 
       default:
         return null;

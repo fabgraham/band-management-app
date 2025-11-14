@@ -1,4 +1,5 @@
 import { supabase } from '../supabase/client';
+import { BandMember, BandMemberWithDetails } from '../../types/member';
 
 export interface Band {
   id: string;
@@ -6,6 +7,9 @@ export interface Band {
   created_by: string;
   created_at: string;
   updated_at: string;
+  // Member data for shared access
+  member_count?: number;
+  current_user_role?: string;
 }
 
 export interface Profile {
@@ -16,12 +20,16 @@ export interface Profile {
 }
 
 /**
- * Get all bands for the current user
+ * Get all bands for the current user (including shared bands)
  */
 export const getBands = async (): Promise<Band[]> => {
   const { data, error } = await supabase
     .from('bands')
-    .select('*')
+    .select(`
+      *,
+      member_count:band_members(count),
+      current_user_role:band_members(role)
+    `)
     .order('created_at', { ascending: false });
 
   if (error) {
@@ -32,12 +40,16 @@ export const getBands = async (): Promise<Band[]> => {
 };
 
 /**
- * Get a single band by ID
+ * Get a single band by ID with member information
  */
 export const getBand = async (bandId: string): Promise<Band | null> => {
   const { data, error } = await supabase
     .from('bands')
-    .select('*')
+    .select(`
+      *,
+      member_count:band_members(count),
+      current_user_role:band_members(role)
+    `)
     .eq('id', bandId)
     .single();
 
@@ -175,4 +187,51 @@ export const canCreateBand = async (): Promise<{
   }
 
   return { canCreate: true };
+};
+
+/**
+ * Check if user has a specific role in a band
+ */
+export const getUserBandRole = async (bandId: string, userId: string): Promise<string | null> => {
+  const { data, error } = await supabase
+    .from('band_members')
+    .select('role')
+    .eq('band_id', bandId)
+    .eq('user_id', userId)
+    .single();
+
+  if (error && error.code !== 'PGRST116') {
+    console.error('Error fetching user band role:', error);
+  }
+
+  return data?.role || null;
+};
+
+/**
+ * Check if user is a member of a band
+ */
+export const isUserBandMember = async (bandId: string, userId: string): Promise<boolean> => {
+  const role = await getUserBandRole(bandId, userId);
+  return role !== null;
+};
+
+/**
+ * Get bands where user is a member (for invitation acceptance)
+ */
+export const getUserMemberBands = async (userId: string): Promise<Band[]> => {
+  const { data, error } = await supabase
+    .from('bands')
+    .select(`
+      *,
+      member_count:band_members(count),
+      current_user_role:band_members(role)
+    `)
+    .eq('band_members.user_id', userId)
+    .order('created_at', { ascending: false });
+
+  if (error) {
+    throw new Error(`Failed to fetch user member bands: ${error.message}`);
+  }
+
+  return data || [];
 };
