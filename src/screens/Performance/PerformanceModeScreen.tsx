@@ -40,6 +40,7 @@ export const PerformanceModeScreen = () => {
   const [showEditSongModal, setShowEditSongModal] = useState(false);
   const [lyricsContentHeight, setLyricsContentHeight] = useState(0);
   const [scrollViewHeight, setScrollViewHeight] = useState(0);
+  const [scrollProgress, setScrollProgress] = useState(0);
 
   const scrollViewRef = useRef<ScrollView>(null);
   const scrollY = useRef(new Animated.Value(0)).current;
@@ -49,12 +50,12 @@ export const PerformanceModeScreen = () => {
   useEffect(() => {
     const loadFontSize = async () => {
       try {
-        const saved = await AsyncStorage.getItem(FONT_SIZE_KEY);
-        if (saved) {
-          setFontSize(parseInt(saved, 10));
+        const savedFontSize = await AsyncStorage.getItem(FONT_SIZE_KEY);
+        if (savedFontSize) {
+          setFontSize(parseInt(savedFontSize, 10));
         }
       } catch (error) {
-        console.log('Failed to load font size preference:', error);
+        console.log('Failed to load font size:', error);
       }
     };
     loadFontSize();
@@ -94,6 +95,17 @@ export const PerformanceModeScreen = () => {
       }
     };
   }, []);
+
+  // Update scroll progress
+  useEffect(() => {
+    const listenerId = scrollY.addListener(({ value }) => {
+      if (lyricsContentHeight > scrollViewHeight) {
+        const progress = value / (lyricsContentHeight - scrollViewHeight);
+        setScrollProgress(Math.min(Math.max(progress, 0), 1));
+      }
+    });
+    return () => scrollY.removeListener(listenerId);
+  }, [lyricsContentHeight, scrollViewHeight]);
 
   useEffect(() => {
     scrollViewRef.current?.scrollTo({ y: 0, animated: false });
@@ -265,7 +277,7 @@ export const PerformanceModeScreen = () => {
             onPress={() => setShowEditSongModal(true)}
             hitSlop={8}
           >
-            <Ionicons name="ellipsis-horizontal-circle-outline" size={24} color="#ffffff" />
+            <Ionicons name="create-outline" size={24} color="#ffffff" />
           </Pressable>
         </View>
       </View>
@@ -283,6 +295,21 @@ export const PerformanceModeScreen = () => {
             </Text>
           )}
         </View>
+      </View>
+
+      {/* Progress Bar */}
+      <View style={styles.progressContainer}>
+        <View style={styles.progressBar}>
+          <View
+            style={[
+              styles.progressFill,
+              { width: `${scrollProgress * 100}%` }
+            ]}
+          />
+        </View>
+        <Text style={styles.progressText}>
+          {Math.round(scrollProgress * 100)}%
+        </Text>
       </View>
 
       {/* Lyrics */}
@@ -492,5 +519,34 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 8,
     elevation: 8,
+  },
+  progressContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    backgroundColor: '#0a0a0a',
+    borderBottomWidth: 1,
+    borderBottomColor: '#333',
+    gap: 12,
+  },
+  progressBar: {
+    flex: 1,
+    height: 4,
+    backgroundColor: '#333',
+    borderRadius: 2,
+    overflow: 'hidden',
+  },
+  progressFill: {
+    height: '100%',
+    backgroundColor: '#007AFF',
+    borderRadius: 2,
+  },
+  progressText: {
+    fontSize: 12,
+    color: '#999',
+    fontWeight: '600',
+    minWidth: 40,
+    textAlign: 'right',
   },
 });

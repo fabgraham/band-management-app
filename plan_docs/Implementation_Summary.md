@@ -1353,21 +1353,47 @@ band-management-app/
 - **Modals & Pickers:** Built the floating `CreateSetlistModal` (name-only with backdrop close) and the `AddSetlistSongsModal` picker to add library songs, with reloading hooks to keep list/detail synchronized.
 - **Navigation:** Integrated `SetlistDetailScreen` into `BandsStack`, wired band context/profile data to gate the freemium limit, and routed card taps → detail screen so each band now has a finished Phase 3 flow.
 
-### Phase 4: Live Performance Mode
-1. Create performance view with large text
-2. Implement auto-scroll functionality
-3. Add tempo/metronome integration
-4. Create section navigation (verse, chorus, bridge)
-5. Add performance history tracking
+### Phase 4: Live Performance Mode ✅ COMPLETE (November 13-14, 2025)
+1. ✅ Create performance view with large text
+2. ✅ Implement auto-scroll functionality
+3. ✅ Font size controls with persistence
+4. ✅ Progress bar showing scroll position
+5. ✅ Previous/Next song navigation
+6. ✅ In-performance song editing
+7. ⏭️ Tempo/metronome integration (deferred)
+8. ⏭️ Section navigation (verse, chorus, bridge) (deferred)
+9. ⏭️ Performance history tracking (deferred)
 
-### Phase 5: Member Management
+**Note:** Calendar tab placeholder exists in UI but full implementation deferred to Phase 6 (requires member sharing from Phase 5).
+
+### Phase 5: Member Management (Next Priority)
 1. Create band_members table
 2. Implement invitation system
 3. Add role-based permissions (owner, admin, member)
 4. Update RLS policies for shared access
 5. Create member management UI
 
-### Phase 6: Advanced Features
+### Phase 6: Calendar & Events (Requires Phase 5)
+**Dependency:** Member management must be complete first for event sharing capabilities.
+
+**Current State:**
+- Calendar tab exists with "Coming Soon" placeholder in BandDetailScreen
+- `show_date` field already exists on `setlists` table for basic gig date tracking
+- Dates display on setlist cards when set
+
+**Planned Features:**
+1. Create events table (gigs, rehearsals)
+2. Event types: Gig, Rehearsal, Other
+3. Event details: date, time, venue/location, notes
+4. Month/week/day calendar views
+5. Share events with band members
+6. Event notifications/reminders
+7. Link setlists to gig events
+8. Calendar export (iCal format)
+
+**Rationale:** Calendar features are designed for collaboration (shared gigs/rehearsals among band members), so member management infrastructure must exist first.
+
+### Phase 7: Advanced Features
 1. Chord diagram library
 2. Audio/video attachments
 3. Practice mode with loop markers
@@ -1420,23 +1446,29 @@ band-management-app/
 
 ## Conclusion
 
-This document captures all features implemented in Phase 1 (Band Management) and Phase 2 (Song Library). It serves as a knowledge base for understanding the architecture, database schema, service layer, UI components, and implementation decisions.
+This document captures all features implemented in Phases 1-4 of the Band Management App. It serves as a knowledge base for understanding the architecture, database schema, service layer, UI components, and implementation decisions.
 
 **Key Achievements:**
-- Complete band management system with CRUD operations
-- Comprehensive song library with search and filtering
+- ✅ **Phase 1:** Complete band management system with CRUD operations
+- ✅ **Phase 2:** Comprehensive song library with search and filtering
+- ✅ **Phase 3:** Setlist management with drag-and-drop ordering
+- ✅ **Phase 4:** Full-featured Performance Mode with auto-scroll
 - Robust RLS policies ensuring data security
-- Freemium limits (1 band, 10 songs per band)
+- Freemium limits (1 band, 10 songs per band, 2 setlists per band)
 - Dual-mode modals for efficient UX
 - Idempotent SQL migrations for safe deployments
 - Type-safe TypeScript implementation throughout
 
-**Next Phase:** Setlist Management - connecting the Library to curated performance collections.
+**Next Phase:** Member Management (Phase 5) - enabling band collaboration and shared access
+
+**Future Phases:**
+- **Phase 6:** Calendar & Events (requires Phase 5 for event sharing)
+- **Phase 7:** Advanced Features (chords, transposition, export)
 
 ---
 
-**Last Updated:** 2025-11-10
-**Version:** 1.1 (Navigation Restructure Update)
+**Last Updated:** 2025-11-14
+**Version:** 1.2 (Phase 4 Complete + Calendar Planning)
 **Maintained By:** Implementation Team
 
 ---
@@ -1621,9 +1653,9 @@ interface ActionMenuItem {
 
 ---
 
-## Phase 4: Lyrics Display & Performance Mode (November 13, 2025)
+## Phase 4: Lyrics Display & Performance Mode (November 13-14, 2025)
 
-**Status:** IN PROGRESS
+**Status:** ✅ COMPLETE
 
 **Major Achievement:** Implemented full-featured Performance Mode for live performances with auto-scroll, setlist navigation, and in-performance editing.
 
@@ -1711,12 +1743,9 @@ Phase 4 delivers the core value proposition of the app: a professional, distract
 - Maintains setlist context throughout performance session
 - Smooth transitions between songs
 
-**8. Song Settings Menu**
-- Three-dot menu icon in header opens `ActionMenuModal`
-- Menu items:
-  - "Edit Song" with create-outline icon
-  - Opens `AddSongModal` in edit mode
-- Reuses existing AddSongModal component for consistency
+**8. Song Editing (Simplified November 14, 2025)**
+- **Edit icon (pencil)** in header directly opens `AddSongModal`
+- **Removed:** Intermediate settings modal (scroll speed, auto-advance controls)
 - User can edit all song details:
   - Title, Artist, Key, BPM, Duration
   - **Lyrics** (critical for performance corrections)
@@ -1724,15 +1753,23 @@ Phase 4 delivers the core value proposition of the app: a professional, distract
 - Changes save immediately via `updateSong()` service
 - Setlist reloads after save via `onSuccess` callback
 - Enables quick fixes during performance without leaving screen
+- **Simplified UX:** One tap to edit (was two taps with settings menu)
 
-**9. Font Size Persistence**
+**9. Progress Bar**
+- Real-time scroll position indicator
+- Shows percentage of lyrics scrolled (0-100%)
+- Updates dynamically during auto-scroll and manual scrolling
+- Positioned below song metadata, above lyrics area
+- Helps users track position in long songs
+
+**10. Font Size Persistence**
 - Uses AsyncStorage key: `@performance_font_size`
 - Loads saved preference on component mount
 - Default: 18px if no preference saved
 - Saves immediately when user adjusts size
 - Applies to all songs in all performances (user-level preference)
 
-**10. Navigation Integration**
+**11. Navigation Integration**
 - SetlistDetailScreen songs made tappable (lines 168-232)
 - Added `handleSongPress` callback with setlist context
 - Navigation disabled when in edit mode (song reordering takes priority)
@@ -1849,20 +1886,20 @@ const handleNext = () => {
    - Adjust font size with +/− buttons
    - Start auto-scroll with Play button
    - Navigate to previous/next songs with arrow buttons
-   - Edit song details (including lyrics) via three-dot menu
+   - Edit song details (including lyrics) via edit icon (pencil)
    - Manually scroll through lyrics
    - Exit back to setlist with close button
 7. User performs entire setlist without leaving performance mode
 
-**Edit During Performance:**
-1. User taps three-dot menu in header
-2. ActionMenuModal opens with "Edit Song" option
-3. User taps "Edit Song"
-4. AddSongModal opens with all song fields pre-filled
-5. User edits lyrics or other details
-6. User saves changes
-7. Modal closes, performance view reloads with updated data
-8. User continues performing
+**Edit During Performance (Simplified November 14, 2025):**
+1. User taps edit icon (pencil) in header
+2. AddSongModal opens directly with all song fields pre-filled
+3. User edits lyrics or other details
+4. User saves changes
+5. Modal closes, performance view reloads with updated data
+6. User continues performing
+
+**Previous Flow (Removed):** Used to have intermediate settings modal with scroll speed/auto-advance controls, requiring two taps to edit. Now streamlined to single tap.
 
 ### Design Decisions
 
@@ -2041,13 +2078,13 @@ Core Features:
 - Auto-scroll based on song duration using Animated API (60fps)
 - Font size adjustment (14-32px) with AsyncStorage persistence
 - Previous/Next song navigation within setlist
-- Song editing accessible via three-dot menu
+- Song editing directly accessible via edit icon (simplified Nov 14)
 - Play/Pause controls with proper disabled states
 
 Components:
-- Created PerformanceModeScreen.tsx (356 lines)
-- Integrated ActionMenuModal for song settings
+- Created PerformanceModeScreen.tsx (now ~420 lines with progress bar)
 - Reused AddSongModal for in-performance editing
+- Removed intermediate settings modal (Nov 14 simplification)
 
 Navigation:
 - Added PerformanceMode route to BandsStack
@@ -2079,3 +2116,69 @@ Files Modified:
 🤖 Generated with Claude Code
 Co-Authored-By: Claude <noreply@anthropic.com>
 ```
+
+---
+
+### Phase 4 Simplification & Calendar Planning (November 14, 2025)
+
+**Performance Mode UX Simplification:**
+
+Removed intermediate settings modal to streamline song editing during performances:
+
+**Before:**
+1. Tap settings icon (gear) → Settings modal opens
+2. Settings modal shows: Scroll speed control, Auto-advance toggle, Edit Song button
+3. Tap "Edit Song" → AddSongModal opens
+4. Edit and save
+
+**After:**
+1. Tap edit icon (pencil) → AddSongModal opens directly
+2. Edit and save
+
+**Changes Made:**
+- Removed scroll speed adjustment (0.5x - 2.0x)
+- Removed auto-advance toggle
+- Removed intermediate settings modal
+- Changed header icon from settings (gear) to edit (pencil)
+- Simplified state management (removed `scrollSpeed`, `autoAdvance`, `showSettingsModal`)
+- Reduced code complexity (~100 lines removed)
+
+**Benefit:** One-tap access to song editing, simpler mental model, cleaner UI
+
+**Calendar Phase Planning:**
+
+Documented that calendar functionality is deferred to Phase 6 (after Phase 5: Member Management):
+
+**Current State:**
+- Calendar tab exists with "Coming Soon" placeholder
+- `show_date` field on setlists table provides basic gig date tracking
+- Dates display on setlist cards
+
+**Why Deferred:**
+- Calendar is designed for collaboration (shared gigs/rehearsals)
+- Requires member management infrastructure first
+- Members need invitation system and permissions
+- Events need to be shareable with band members
+
+**Phase 6 Planned Features:**
+- Events table (gigs, rehearsals, other)
+- Month/week/day calendar views
+- Event sharing with members
+- Link setlists to gig events
+- Notifications/reminders
+- iCal export
+
+**Updated Phase Order:**
+1. ✅ Band Management
+2. ✅ Song Library
+3. ✅ Setlist Management
+4. ✅ Performance Mode
+5. 🔄 Member Management (Next)
+6. ⏭️ Calendar & Events (Requires Phase 5)
+7. ⏭️ Advanced Features
+
+**Files Modified:**
+- `src/screens/Performance/PerformanceModeScreen.tsx` - Removed settings modal, simplified edit flow
+- `plan_docs/Implementation_Summary.md` - Updated phase planning, marked Phase 4 complete, documented calendar dependency
+
+---
